@@ -1,6 +1,5 @@
-// Downloads Static Maps images at build time so Google is hit once per deploy,
-// not once per visitor. Images land in public/maps/ and are served from Vercel CDN.
-// Same approach as napa2026: terrain map, markers, straight-line path.
+// Downloads Static Maps images at build time.
+// Uses Directions API for actual road routes, falls back to straight line.
 import { writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -22,123 +21,133 @@ const TYPE_COLORS = {
   travel:   "0x94a3b8",
 };
 
-// Each day: stops with lat/lng/type shown as markers.
-// For single-location days, no path is drawn.
-// For travel days covering large distances, omit the path line (too distorted at scale).
 const days = [
   {
     id: "sunday",
-    center: { lat: 39.9, lng: -7.8 },
-    zoom: 7,
-    stops: [
-      { lat: 38.7742, lng: -9.1336, type: "travel" },  // Lisbon Airport
-      { lat: 41.0881, lng: -7.9064, type: "hotel"  },  // Six Senses
+    // Lisbon Airport → Six Senses Douro Valley
+    route: [
+      { lat: 38.7742, lng: -9.1336, type: "travel" },
+      { lat: 41.0881, lng: -7.9064, type: "hotel"  },
     ],
-    drawPath: false,  // too far apart — skip path line
   },
   {
     id: "monday",
-    center: { lat: 41.09, lng: -7.91 },
-    zoom: 13,
-    stops: [
+    // Single location — Six Senses estate
+    center: { lat: 41.09, lng: -7.91 }, zoom: 13,
+    route: [
       { lat: 41.0881, lng: -7.9064, type: "hotel" },
     ],
-    drawPath: false,
   },
   {
     id: "tuesday",
-    center: { lat: 41.09, lng: -7.91 },
-    zoom: 13,
-    stops: [
+    center: { lat: 41.09, lng: -7.91 }, zoom: 13,
+    route: [
       { lat: 41.0881, lng: -7.9064, type: "hotel" },
     ],
-    drawPath: false,
   },
   {
     id: "wednesday",
-    center: { lat: 39.8, lng: -7.5 },
-    zoom: 7,
-    stops: [
-      { lat: 41.0881, lng: -7.9064, type: "travel" },  // Six Senses (depart)
-      { lat: 38.4558, lng: -7.3827, type: "hotel"  },  // Barrocal
+    // Six Senses → São Lourenço do Barrocal
+    route: [
+      { lat: 41.0881, lng: -7.9064, type: "travel" },
+      { lat: 38.4558, lng: -7.3827, type: "hotel"  },
     ],
-    drawPath: false,  // too far apart
   },
   {
     id: "thursday",
-    center: { lat: 38.44, lng: -7.47 },
-    zoom: 11,
-    stops: [
-      { lat: 38.4558, lng: -7.3827, type: "hotel" },  // Barrocal
-      { lat: 38.4203, lng: -7.5381, type: "meal"  },  // SAHIDA (~15km)
+    // Barrocal → SAHIDA dinner
+    route: [
+      { lat: 38.4558, lng: -7.3827, type: "hotel" },
+      { lat: 38.4203, lng: -7.5381, type: "meal"  },
     ],
-    drawPath: true,
   },
   {
     id: "friday",
-    center: { lat: 38.2, lng: -7.7 },
-    zoom: 9,
-    stops: [
-      { lat: 38.4558, lng: -7.3827, type: "travel" },  // Barrocal (depart)
-      { lat: 37.9631, lng: -7.9856, type: "hotel"  },  // Malhadinha Nova
+    // Barrocal → Malhadinha Nova
+    route: [
+      { lat: 38.4558, lng: -7.3827, type: "travel" },
+      { lat: 37.9631, lng: -7.9856, type: "hotel"  },
     ],
-    drawPath: false,  // too far apart
   },
   {
     id: "saturday",
-    center: { lat: 37.96, lng: -7.99 },
-    zoom: 13,
-    stops: [
+    center: { lat: 37.96, lng: -7.99 }, zoom: 13,
+    route: [
       { lat: 37.9631, lng: -7.9856, type: "hotel" },
     ],
-    drawPath: false,
   },
   {
     id: "sunday-lisbon",
-    center: { lat: 38.35, lng: -8.1 },
-    zoom: 8,
-    stops: [
-      { lat: 37.9631, lng: -7.9856, type: "travel" },  // Malhadinha Nova
-      { lat: 38.7104, lng: -9.1413, type: "hotel"  },  // The Ivens
+    // Malhadinha Nova → The Ivens, Lisbon
+    route: [
+      { lat: 37.9631, lng: -7.9856, type: "travel" },
+      { lat: 38.7104, lng: -9.1413, type: "hotel"  },
     ],
-    drawPath: false,  // too far apart
   },
   {
     id: "monday-lisbon",
-    center: { lat: 38.717, lng: -9.14 },
-    zoom: 14,
-    stops: [
+    center: { lat: 38.717, lng: -9.14 }, zoom: 14,
+    route: [
       { lat: 38.7104, lng: -9.1413, type: "hotel" },
     ],
-    drawPath: false,
   },
 ];
 
-function buildUrl(day) {
-  const pinned = day.stops.filter((s) => s.lat);
+// Fetch actual road polyline via Directions API
+async function getRoutePolyline(stops) {
+  if (stops.length < 2) return null;
+  const origin = `${stops[0].lat},${stops[0].lng}`;
+  const dest   = `${stops[stops.length - 1].lat},${stops[stops.length - 1].lng}`;
+  const mids   = stops.slice(1, -1).map(p => `${p.lat},${p.lng}`).join("|");
+  const url    = `https://maps.googleapis.com/maps/api/directions/json`
+    + `?origin=${origin}&destination=${dest}`
+    + (mids ? `&waypoints=${mids}` : "")
+    + `&mode=driving&key=${KEY}`;
 
-  const parts = [
-    `https://maps.googleapis.com/maps/api/staticmap`,
-    `?center=${day.center.lat},${day.center.lng}`,
-    `&zoom=${day.zoom}`,
-    `&size=640x400`,
-    `&scale=2`,
-    `&maptype=terrain`,
-    `&key=${KEY}`,
-    ...pinned.map((s) => `&markers=color:${TYPE_COLORS[s.type]}|size:mid|${s.lat},${s.lng}`),
-  ];
+  const res  = await fetch(url);
+  const json = await res.json();
+  if (json.status !== "OK") {
+    console.warn(`  Directions API: ${json.status} — using straight line`);
+    return null;
+  }
+  return json.routes[0].overview_polyline.points;
+}
 
-  if (day.drawPath && pinned.length > 1) {
-    parts.push(
-      `&path=color:0x1a3a5c99|weight:3|${pinned.map((p) => `${p.lat},${p.lng}`).join("|")}`
-    );
+async function buildUrl(day) {
+  const markers = day.route.map(
+    (s) => `&markers=color:${TYPE_COLORS[s.type]}|size:mid|${s.lat},${s.lng}`
+  );
+
+  let pathPart = "";
+  if (day.route.length >= 2) {
+    const polyline = await getRoutePolyline(day.route);
+    if (polyline) {
+      pathPart = `&path=color:0x1a3a5cCC|weight:4|enc:${encodeURIComponent(polyline)}`;
+    } else {
+      const pts = day.route.map(p => `${p.lat},${p.lng}`).join("|");
+      pathPart = `&path=color:0x1a3a5cCC|weight:4|${pts}`;
+    }
   }
 
-  return parts.join("");
+  // For multi-stop days let Google auto-fit; for single-location days use explicit center/zoom
+  const centerZoom = day.center
+    ? `&center=${day.center.lat},${day.center.lng}&zoom=${day.zoom}`
+    : `&size=640x400`; // will be overridden by auto-fit when path/markers present
+
+  return [
+    `https://maps.googleapis.com/maps/api/staticmap`,
+    `?size=640x400`,
+    `&scale=2`,
+    `&maptype=terrain`,
+    day.center ? `&center=${day.center.lat},${day.center.lng}&zoom=${day.zoom}` : "",
+    `&key=${KEY}`,
+    ...markers,
+    pathPart,
+  ].join("");
 }
 
 for (const day of days) {
-  const url = buildUrl(day);
+  const url = await buildUrl(day);
   const outPath = join(OUT_DIR, `${day.id}.png`);
   console.log(`Fetching map for ${day.id}…`);
   const res = await fetch(url);
