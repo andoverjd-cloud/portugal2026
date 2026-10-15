@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --color-azure: #1a3a5c;
+  --color-azure-dark: #0e2340;
+  --color-azure-light: #2c5282;
+  --color-terra: #c4622d;
+  --color-terra-light: #d97b4a;
+  --color-sand: #f5f0e8;
+  --color-sand-dark: #ede6d8;
+  --color-slate: #2c3e50;
+
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-sand);
+    color: var(--color-slate);
+    font-family: var(--font-sans);
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-serif);
+  }
+}
+
+.day-section:nth-child(even) {
+  background-color: var(--color-sand-dark);
+}
