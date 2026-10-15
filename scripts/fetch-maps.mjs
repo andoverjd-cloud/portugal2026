@@ -93,24 +93,40 @@ const days = [
   },
 ];
 
-// Fetch actual road polyline via Directions API
+// Fetch actual road polyline via Routes API v2
 async function getRoutePolyline(stops) {
   if (stops.length < 2) return null;
-  const origin = `${stops[0].lat},${stops[0].lng}`;
-  const dest   = `${stops[stops.length - 1].lat},${stops[stops.length - 1].lng}`;
-  const mids   = stops.slice(1, -1).map(p => `${p.lat},${p.lng}`).join("|");
-  const url    = `https://maps.googleapis.com/maps/api/directions/json`
-    + `?origin=${origin}&destination=${dest}`
-    + (mids ? `&waypoints=${mids}` : "")
-    + `&mode=driving&key=${KEY}`;
 
-  const res  = await fetch(url);
+  const body = {
+    origin:      { location: { latLng: { latitude: stops[0].lat,                   longitude: stops[0].lng } } },
+    destination: { location: { latLng: { latitude: stops[stops.length-1].lat,      longitude: stops[stops.length-1].lng } } },
+    travelMode: "DRIVE",
+    routingPreference: "TRAFFIC_UNAWARE",
+    polylineQuality: "HIGH_QUALITY",
+  };
+
+  if (stops.length > 2) {
+    body.intermediates = stops.slice(1, -1).map(p => ({
+      location: { latLng: { latitude: p.lat, longitude: p.lng } }
+    }));
+  }
+
+  const res  = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": KEY,
+      "X-Goog-FieldMask": "routes.polyline.encodedPolyline",
+    },
+    body: JSON.stringify(body),
+  });
+
   const json = await res.json();
-  if (json.status !== "OK") {
-    console.warn(`  Directions API: ${json.status} — using straight line`);
+  if (!json.routes?.[0]?.polyline?.encodedPolyline) {
+    console.warn(`  Routes API error: ${JSON.stringify(json)} — using straight line`);
     return null;
   }
-  return json.routes[0].overview_polyline.points;
+  return json.routes[0].polyline.encodedPolyline;
 }
 
 async function buildUrl(day) {
