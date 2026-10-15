@@ -41,6 +41,9 @@ export default function Home() {
                 {hotel.name}
               </a>
             ))}
+            <a href="/memories" className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 text-sand/80 text-xs hover:text-sand transition-colors">
+              <span>📸</span> Memories
+            </a>
           </div>
         </div>
       </header>
