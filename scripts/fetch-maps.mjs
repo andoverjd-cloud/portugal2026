@@ -102,7 +102,6 @@ async function getRoutePolyline(stops) {
     destination: { location: { latLng: { latitude: stops[stops.length-1].lat,      longitude: stops[stops.length-1].lng } } },
     travelMode: "DRIVE",
     routingPreference: "TRAFFIC_UNAWARE",
-    polylineQuality: "HIGH_QUALITY",
   };
 
   if (stops.length > 2) {
@@ -171,7 +170,7 @@ for (const day of days) {
   const outPath = join(OUT_DIR, `${day.id}.png`);
   console.log(`Fetching map for ${day.id}…`);
   // Log URL shape (without key) for debugging
-  console.log(`  URL: ${url.replace(KEY, "KEY").substring(0, 300)}`);
+  console.log(`  URL: ${url.replace(KEY, "KEY").substring(0, 600)}`);
   const res = await fetch(url);
   if (!res.ok) {
     const body = await res.text();
