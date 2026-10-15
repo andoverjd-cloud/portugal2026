@@ -28,8 +28,8 @@ const TYPE_COLORS = {
 const days = [
   {
     id: "sunday",
-    center: { lat: 39.9, lng: -8.5 },
-    zoom: 6,
+    center: { lat: 39.9, lng: -7.8 },
+    zoom: 7,
     stops: [
       { lat: 38.7742, lng: -9.1336, type: "travel" },  // Lisbon Airport
       { lat: 41.0881, lng: -7.9064, type: "hotel"  },  // Six Senses
@@ -56,7 +56,7 @@ const days = [
   },
   {
     id: "wednesday",
-    center: { lat: 39.8, lng: -7.7 },
+    center: { lat: 39.8, lng: -7.5 },
     zoom: 7,
     stops: [
       { lat: 41.0881, lng: -7.9064, type: "travel" },  // Six Senses (depart)
@@ -95,7 +95,7 @@ const days = [
   },
   {
     id: "sunday-lisbon",
-    center: { lat: 38.35, lng: -8.6 },
+    center: { lat: 38.35, lng: -8.1 },
     zoom: 8,
     stops: [
       { lat: 37.9631, lng: -7.9856, type: "travel" },  // Malhadinha Nova
