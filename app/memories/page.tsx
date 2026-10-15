@@ -11,7 +11,7 @@ const DAY_MAP: Record<string, { label: string; subtitle: string }> = {};
 for (const day of days) {
   const d = new Date(day.date);
   const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  DAY_MAP[key] = { label: day.label, subtitle: day.subtitle };
+  DAY_MAP[key] = { label: day.label ?? "", subtitle: day.subtitle ?? "" };
 }
 
 function photoDateKey(pathname: string): string | null {
