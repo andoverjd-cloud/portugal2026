@@ -166,9 +166,13 @@ for (const day of days) {
   const url = await buildUrl(day);
   const outPath = join(OUT_DIR, `${day.id}.png`);
   console.log(`Fetching map for ${day.id}…`);
+  // Log URL shape (without key) for debugging
+  console.log(`  URL: ${url.replace(KEY, "KEY").substring(0, 300)}`);
   const res = await fetch(url);
   if (!res.ok) {
+    const body = await res.text();
     console.error(`  Failed: ${res.status} ${res.statusText}`);
+    console.error(`  Body: ${body.substring(0, 500)}`);
     process.exit(1);
   }
   const buf = Buffer.from(await res.arrayBuffer());
