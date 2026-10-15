@@ -28,10 +28,15 @@ export default async function MemoriesPage({
   let blobs: Awaited<ReturnType<typeof list>>["blobs"] = [];
   try {
     const result = await list({ prefix: `${TRIP_ID}/`, token: process.env.BLOB_READ_WRITE_TOKEN });
-    blobs = result.blobs.sort(
-      (a, b) =>
-        new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
-    );
+    const photoDate = (pathname: string) => {
+      const m = pathname.match(/\/(\d{4}-\d{2}-\d{2}T\d{6})/);
+      return m ? m[1].replace("T", " ").replace(/(\d{2})(\d{2})(\d{2})$/, "$1:$2:$3") : null;
+    };
+    blobs = result.blobs.sort((a, b) => {
+      const da = photoDate(a.pathname) ?? new Date(a.uploadedAt).toISOString();
+      const db = photoDate(b.pathname) ?? new Date(b.uploadedAt).toISOString();
+      return db.localeCompare(da);
+    });
   } catch {
     // BLOB_READ_WRITE_TOKEN not yet configured
   }
