@@ -14,70 +14,97 @@ if (!KEY) {
   process.exit(0);
 }
 
-const HOTEL = { lat: 38.4024, lng: -122.3609 };
-
 const TYPE_COLORS = {
-  winery: "0x6b2737",
-  meal: "0xc9a84c",
-  travel: "0x94a3b8",
-  hotel: "0x2c3e50",
+  hotel:    "0x1a3a5c",
+  activity: "0x1a3a5c",
+  meal:     "0xc4622d",
+  travel:   "0x94a3b8",
 };
 
-// Inline itinerary — kept in sync with lib/itinerary.ts
+// Portugal days — kept in sync with lib/itinerary.ts
 const days = [
   {
-    id: "tuesday",
-    center: { lat: 38.465, lng: -122.41 },
-    zoom: 11,
+    id: "sunday",
+    center: { lat: 41.1, lng: -7.9 },
+    zoom: 8,
     stops: [
-      { lat: 38.4024, lng: -122.3609, type: "hotel" },
-      { lat: 38.4334, lng: -122.4041, type: "travel" },
-      { lat: 38.5012, lng: -122.4178, type: "winery" },
+      { lat: 38.7742, lng: -9.1336, type: "travel" },  // Lisbon Airport
+      { lat: 41.0881, lng: -7.9064, type: "hotel" },   // Six Senses
+    ],
+  },
+  {
+    id: "monday",
+    center: { lat: 41.09, lng: -7.91 },
+    zoom: 13,
+    stops: [
+      { lat: 41.0881, lng: -7.9064, type: "hotel" },
+    ],
+  },
+  {
+    id: "tuesday",
+    center: { lat: 41.09, lng: -7.91 },
+    zoom: 13,
+    stops: [
+      { lat: 41.0881, lng: -7.9064, type: "hotel" },
     ],
   },
   {
     id: "wednesday",
-    center: { lat: 38.478, lng: -122.415 },
-    zoom: 11,
+    center: { lat: 39.8, lng: -7.6 },
+    zoom: 7,
     stops: [
-      { lat: 38.5043, lng: -122.4098, type: "winery" },
-      { lat: 38.4753, lng: -122.4286, type: "winery" },
-      { lat: 38.449, lng: -122.3925, type: "winery" },
+      { lat: 41.0881, lng: -7.9064, type: "travel" },  // Six Senses (depart)
+      { lat: 38.4558, lng: -7.3827, type: "hotel" },   // Barrocal
     ],
   },
   {
     id: "thursday",
-    center: { lat: 38.52, lng: -122.49 },
+    center: { lat: 38.44, lng: -7.47 },
     zoom: 11,
     stops: [
-      { lat: 38.4334, lng: -122.4041, type: "travel" },
-      { lat: 38.5748, lng: -122.5512, type: "winery" },
-      { lat: 38.578, lng: -122.579, type: "winery" },
-      { lat: 38.5791, lng: -122.5541, type: "winery" },
+      { lat: 38.4558, lng: -7.3827, type: "hotel" },
+      { lat: 38.4203, lng: -7.5381, type: "meal" },    // SAHIDA
     ],
   },
   {
     id: "friday",
-    center: { lat: 38.44, lng: -122.39 },
-    zoom: 11,
+    center: { lat: 38.2, lng: -7.7 },
+    zoom: 9,
     stops: [
-      { lat: 38.3929, lng: -122.3581, type: "winery" },
-      { lat: 38.3714, lng: -122.358, type: "winery" },
-      { lat: 38.5305, lng: -122.3869, type: "winery" },
+      { lat: 38.4558, lng: -7.3827, type: "travel" },  // Barrocal (depart)
+      { lat: 37.9631, lng: -7.9856, type: "hotel" },   // Malhadinha Nova
     ],
   },
   {
     id: "saturday",
-    center: { lat: 38.497, lng: -122.469 },
+    center: { lat: 37.96, lng: -7.99 },
     zoom: 13,
     stops: [
-      { lat: 38.4971, lng: -122.4693, type: "winery" },
+      { lat: 37.9631, lng: -7.9856, type: "hotel" },
+    ],
+  },
+  {
+    id: "sunday-lisbon",
+    center: { lat: 38.35, lng: -8.57 },
+    zoom: 8,
+    stops: [
+      { lat: 37.9631, lng: -7.9856, type: "travel" },  // Malhadinha (depart)
+      { lat: 38.7104, lng: -9.1413, type: "hotel" },   // The Ivens
+    ],
+  },
+  {
+    id: "monday-lisbon",
+    center: { lat: 38.717, lng: -9.14 },
+    zoom: 13,
+    stops: [
+      { lat: 38.7104, lng: -9.1413, type: "hotel" },
     ],
   },
 ];
 
 function buildUrl(day) {
   const pinned = day.stops.filter((s) => s.lat && s.type !== "travel");
+  const travelPins = day.stops.filter((s) => s.type === "travel" && s.lat);
 
   const parts = [
     `https://maps.googleapis.com/maps/api/staticmap`,
@@ -87,14 +114,13 @@ function buildUrl(day) {
     `&scale=2`,
     `&maptype=terrain`,
     `&key=${KEY}`,
-    `&markers=color:0x2c3e50|size:mid|${HOTEL.lat},${HOTEL.lng}`,
     ...pinned.map((s) => `&markers=color:${TYPE_COLORS[s.type]}|size:mid|${s.lat},${s.lng}`),
+    ...travelPins.map((s) => `&markers=color:${TYPE_COLORS.travel}|size:small|${s.lat},${s.lng}`),
   ];
 
-  if (pinned.length > 0) {
-    const pts = [HOTEL, ...pinned, HOTEL];
+  if (day.stops.length > 1) {
     parts.push(
-      `&path=color:0x6b273799|weight:3|${pts.map((p) => `${p.lat},${p.lng}`).join("|")}`
+      `&path=color:0x1a3a5c99|weight:3|${day.stops.map((p) => `${p.lat},${p.lng}`).join("|")}`
     );
   }
 

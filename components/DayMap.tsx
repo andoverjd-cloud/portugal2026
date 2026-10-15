@@ -7,19 +7,17 @@ interface DayMapProps {
   regions: Region[];
 }
 
-export default function DayMap({ center, zoom, regions }: DayMapProps) {
-  const src = `https://www.openstreetmap.org/export/embed.html?bbox=${center.lng - 0.5},${center.lat - 0.3},${center.lng + 0.5},${center.lat + 0.3}&layer=mapnik`;
-
+export default function DayMap({ dayId, regions }: DayMapProps) {
   return (
     <div className="space-y-3">
-      <div className="w-full rounded-xl overflow-hidden shadow-sm border border-slate/10" style={{ height: "320px" }}>
-        <iframe
-          src={src}
-          width="100%"
-          height="100%"
-          style={{ border: 0 }}
-          loading="lazy"
-          title="Day map"
+      <div className="w-full rounded-xl overflow-hidden shadow-sm">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/maps/${dayId}.png`}
+          alt="Day route map"
+          width={1280}
+          height={800}
+          className="w-full h-auto"
         />
       </div>
 
