@@ -52,26 +52,7 @@ export const days: Day[] = [
     id: "sunday",
     date: "October 18, 2026",
     label: "Sunday",
-    subtitle: "Departure — Boston to Lisbon",
-    mapCenter: { lat: 38.72, lng: -9.14 },
-    mapZoom: 5,
-    regions: [
-      { name: "Boston → Lisbon", description: "Overnight transatlantic flight", color: "#1a3a5c" },
-    ],
-    stops: [
-      {
-        time: "11:45 PM",
-        name: "Flight to Lisbon",
-        description: "Overnight flight departing Boston. Arrive Lisbon Monday morning at 10:45 AM.",
-        type: "travel",
-      },
-    ],
-  },
-  {
-    id: "monday",
-    date: "October 19, 2026",
-    label: "Monday",
-    subtitle: "Arrival — Douro Valley",
+    subtitle: "Arrival — Lisbon to the Douro Valley",
     mapCenter: { lat: 41.1, lng: -7.9 },
     mapZoom: 10,
     regions: [
@@ -117,26 +98,25 @@ export const days: Day[] = [
     ],
   },
   {
-    id: "tuesday",
-    date: "October 20, 2026",
-    label: "Tuesday",
-    subtitle: "Douro Valley — Wine, Gardens & Port",
+    id: "monday",
+    date: "October 19, 2026",
+    label: "Monday",
+    subtitle: "Douro Valley — Gardens, Wine & Dinner",
     mapCenter: { lat: 41.1, lng: -7.9 },
     mapZoom: 10,
     regions: [
       { name: "Six Senses Estate", description: "Gardens, spa, and vineyard experiences on property", color: "#1a3a5c" },
-      { name: "Douro Valley", description: "Quinta do Crasto — Port wine at its source", color: "#c4622d" },
     ],
     stops: [
       {
-        time: "9:00 AM",
+        time: "Morning",
         name: "Garden Tour & Garden Lunch",
         description: "Guided tour of the estate's organic gardens followed by a farm-to-table lunch celebrating the valley's harvest.",
         type: "activity",
         tags: ["Lunch"],
       },
       {
-        time: "1:00 PM",
+        time: "Afternoon",
         name: "Wine Tasting",
         description: "Private tasting of Douro Valley wines at the resort.",
         type: "activity",
@@ -144,21 +124,21 @@ export const days: Day[] = [
       {
         time: "7:00 PM",
         name: "The Vale de Abraão Restaurant",
-        description: "Dinner at the resort's intimate Vale de Abraão restaurant — relaxed and elegant.",
+        description: "Dinner at the resort's intimate restaurant — relaxed and elegant.",
         type: "meal",
       },
     ],
   },
   {
-    id: "wednesday",
-    date: "October 21, 2026",
-    label: "Wednesday",
+    id: "tuesday",
+    date: "October 20, 2026",
+    label: "Tuesday",
     subtitle: "Douro Valley — Hike, Port & Farewell Dinner",
     mapCenter: { lat: 41.1, lng: -7.9 },
     mapZoom: 10,
     regions: [
       { name: "Six Senses Estate", description: "Morning hike through the estate trails", color: "#1a3a5c" },
-      { name: "Douro Valley", description: "\"Walk and Taste Port Knox\" — an afternoon port experience", color: "#c4622d" },
+      { name: "Douro Valley", description: "Walk and Taste Port Knox — an afternoon port experience", color: "#c4622d" },
     ],
     stops: [
       {
@@ -195,15 +175,15 @@ export const days: Day[] = [
     ],
   },
   {
-    id: "thursday",
-    date: "October 22, 2026",
-    label: "Thursday",
+    id: "wednesday",
+    date: "October 21, 2026",
+    label: "Wednesday",
     subtitle: "Into the Alentejo — São Lourenço do Barrocal",
     mapCenter: { lat: 38.55, lng: -7.35 },
     mapZoom: 10,
     regions: [
       { name: "Alentejo", description: "Portugal's vast interior — rolling plains, cork oaks, and ancient estates", color: "#1a3a5c" },
-      { name: "Monsaraz", description: "Medieval hilltop village overlooking the Alqueva reservoir near Barrocal", color: "#c4622d" },
+      { name: "Monsaraz", description: "Medieval hilltop village overlooking the Alqueva reservoir", color: "#c4622d" },
     ],
     stops: [
       {
@@ -244,15 +224,15 @@ export const days: Day[] = [
     ],
   },
   {
-    id: "friday",
-    date: "October 23, 2026",
-    label: "Friday",
+    id: "thursday",
+    date: "October 22, 2026",
+    label: "Thursday",
     subtitle: "Alentejo — Olive Oil, Wine & Off-Property Dinner",
     mapCenter: { lat: 38.55, lng: -7.35 },
     mapZoom: 10,
     regions: [
       { name: "São Lourenço do Barrocal", description: "Estate tastings — olive oil and vertical wine", color: "#1a3a5c" },
-      { name: "Reguengos de Monsaraz", description: "Town nearby — dinner at SAHIDA restaurant", color: "#c4622d" },
+      { name: "Reguengos de Monsaraz", description: "Nearby town — dinner at SAHIDA restaurant", color: "#c4622d" },
     ],
     stops: [
       {
@@ -270,7 +250,7 @@ export const days: Day[] = [
       {
         time: "6:30 PM",
         name: "Drive to Dinner",
-        description: "Short drive to Reguengos de Monsaraz for dinner.",
+        description: "Short drive to Reguengos de Monsaraz.",
         type: "travel",
       },
       {
@@ -285,15 +265,15 @@ export const days: Day[] = [
     ],
   },
   {
-    id: "saturday",
-    date: "October 24, 2026",
-    label: "Saturday",
+    id: "friday",
+    date: "October 23, 2026",
+    label: "Friday",
     subtitle: "Alentejo — Malhadinha Nova",
     mapCenter: { lat: 37.96, lng: -7.98 },
     mapZoom: 10,
     regions: [
       { name: "São Lourenço do Barrocal", description: "Morning farewell to the estate", color: "#c4622d" },
-      { name: "Herdade da Malhadinha Nova", description: "Southern Alentejo — Alentejano wines and olive oil country near Beja", color: "#1a3a5c" },
+      { name: "Herdade da Malhadinha Nova", description: "Southern Alentejo — acclaimed wines near Beja", color: "#1a3a5c" },
     ],
     stops: [
       {
@@ -327,7 +307,32 @@ export const days: Day[] = [
     ],
   },
   {
-    id: "sunday",
+    id: "saturday",
+    date: "October 24, 2026",
+    label: "Saturday",
+    subtitle: "Malhadinha Nova — A Day on the Estate",
+    mapCenter: { lat: 37.96, lng: -7.98 },
+    mapZoom: 11,
+    regions: [
+      { name: "Herdade da Malhadinha Nova", description: "A full day exploring the estate and its wines", color: "#1a3a5c" },
+    ],
+    stops: [
+      {
+        time: "Morning",
+        name: "Morning on the Estate",
+        description: "Explore the vineyards, olive groves, and grounds at your own pace.",
+        type: "activity",
+      },
+      {
+        time: "7:00 PM",
+        name: "Casa do Alentejo — Casa Verde",
+        description: "Another evening at the estate restaurant.",
+        type: "meal",
+      },
+    ],
+  },
+  {
+    id: "sunday-lisbon",
     date: "October 25, 2026",
     label: "Sunday",
     subtitle: "Lisbon — The Ivens",
@@ -341,7 +346,7 @@ export const days: Day[] = [
       {
         time: "Morning",
         name: "Morning at Malhadinha Nova",
-        description: "Final morning in the Alentejo — breakfast, a walk through the vineyards.",
+        description: "Final morning in the Alentejo — breakfast and a walk through the vineyards.",
         type: "activity",
       },
       {
@@ -363,7 +368,7 @@ export const days: Day[] = [
       {
         time: "6:30 PM",
         name: "Gastro Bar at the Ivens",
-        description: "Evening cocktails and bites at the hotel's stylish gastro bar — a gentle landing after the countryside.",
+        description: "Evening cocktails and bites at the hotel's stylish gastro bar.",
         type: "meal",
       },
     ],
