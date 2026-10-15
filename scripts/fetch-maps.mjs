@@ -138,8 +138,10 @@ async function buildUrl(day) {
   if (day.route.length >= 2) {
     const polyline = await getRoutePolyline(day.route);
     if (polyline) {
-      // Static Maps needs the polyline with only \ and | escaped, not full URL encoding
-      const encoded = polyline.replace(/\\/g, "%5C").replace(/\|/g, "%7C");
+      // Encode chars that are illegal in URL query strings but appear in encoded polylines.
+      // Full encodeURIComponent breaks @ (which the API requires unencoded), so we target
+      // only the problematic set: \ | [ ] ? ^ ` { }
+      const encoded = polyline.replace(/[\\|[\]?^`{}]/g, (c) => encodeURIComponent(c));
       pathPart = `&path=color:0x1a3a5cCC|weight:4|enc:${encoded}`;
     } else {
       const pts = day.route.map(p => `${p.lat},${p.lng}`).join("|");
