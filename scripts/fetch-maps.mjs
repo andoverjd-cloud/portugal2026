@@ -138,7 +138,9 @@ async function buildUrl(day) {
   if (day.route.length >= 2) {
     const polyline = await getRoutePolyline(day.route);
     if (polyline) {
-      pathPart = `&path=color:0x1a3a5cCC|weight:4|enc:${encodeURIComponent(polyline)}`;
+      // Static Maps needs the polyline with only \ and | escaped, not full URL encoding
+      const encoded = polyline.replace(/\\/g, "%5C").replace(/\|/g, "%7C");
+      pathPart = `&path=color:0x1a3a5cCC|weight:4|enc:${encoded}`;
     } else {
       const pts = day.route.map(p => `${p.lat},${p.lng}`).join("|");
       pathPart = `&path=color:0x1a3a5cCC|weight:4|${pts}`;
