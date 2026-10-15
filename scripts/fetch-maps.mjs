@@ -93,13 +93,36 @@ const days = [
   },
 ];
 
-// Fetch actual road polyline via Routes API v2
-async function getRoutePolyline(stops) {
+// Decode a Google encoded polyline into [[lat, lng], ...] pairs
+function decodePolyline(encoded) {
+  const pts = [];
+  let i = 0, lat = 0, lng = 0;
+  while (i < encoded.length) {
+    let b, shift = 0, result = 0;
+    do { b = encoded.charCodeAt(i++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+    shift = 0; result = 0;
+    do { b = encoded.charCodeAt(i++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+    pts.push([lat / 1e5, lng / 1e5]);
+  }
+  return pts;
+}
+
+// Sample up to maxPts evenly-spaced points from an array
+function samplePoints(pts, maxPts) {
+  if (pts.length <= maxPts) return pts;
+  const step = (pts.length - 1) / (maxPts - 1);
+  return Array.from({ length: maxPts }, (_, k) => pts[Math.round(k * step)]);
+}
+
+// Fetch actual road polyline via Routes API v2, return as sampled lat/lng pairs
+async function getRoutePoints(stops, maxPts = 40) {
   if (stops.length < 2) return null;
 
   const body = {
-    origin:      { location: { latLng: { latitude: stops[0].lat,                   longitude: stops[0].lng } } },
-    destination: { location: { latLng: { latitude: stops[stops.length-1].lat,      longitude: stops[stops.length-1].lng } } },
+    origin:      { location: { latLng: { latitude: stops[0].lat,              longitude: stops[0].lng } } },
+    destination: { location: { latLng: { latitude: stops[stops.length-1].lat, longitude: stops[stops.length-1].lng } } },
     travelMode: "DRIVE",
     routingPreference: "TRAFFIC_UNAWARE",
   };
@@ -110,7 +133,7 @@ async function getRoutePolyline(stops) {
     }));
   }
 
-  const res  = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+  const res = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -125,7 +148,8 @@ async function getRoutePolyline(stops) {
     console.warn(`  Routes API error: ${JSON.stringify(json)} — using straight line`);
     return null;
   }
-  return json.routes[0].polyline.encodedPolyline;
+  const decoded = decodePolyline(json.routes[0].polyline.encodedPolyline);
+  return samplePoints(decoded, maxPts);
 }
 
 async function buildUrl(day) {
@@ -135,17 +159,11 @@ async function buildUrl(day) {
 
   let pathPart = "";
   if (day.route.length >= 2) {
-    const polyline = await getRoutePolyline(day.route);
-    if (polyline) {
-      // Encode chars that are illegal in URL query strings but appear in encoded polylines.
-      // Full encodeURIComponent breaks @ (which the API requires unencoded), so we target
-      // only the problematic set: \ | [ ] ? ^ ` { }
-      const encoded = polyline.replace(/[\\|[\]?^`{}]/g, (c) => encodeURIComponent(c));
-      pathPart = `&path=color:0x1a3a5cCC|weight:4|enc:${encoded}`;
-    } else {
-      const pts = day.route.map(p => `${p.lat},${p.lng}`).join("|");
-      pathPart = `&path=color:0x1a3a5cCC|weight:4|${pts}`;
-    }
+    const routePts = await getRoutePoints(day.route);
+    const pathCoords = routePts
+      ? routePts.map(([lat, lng]) => `${lat.toFixed(5)},${lng.toFixed(5)}`).join("|")
+      : day.route.map(p => `${p.lat},${p.lng}`).join("|");
+    pathPart = `&path=color:0x1a3a5cCC|weight:4|${pathCoords}`;
   }
 
   // For multi-stop days let Google auto-fit; for single-location days use explicit center/zoom
