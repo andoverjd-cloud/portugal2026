@@ -53,7 +53,7 @@ export default function DaySection({ day }: { day: Day }) {
         </button>
 
         {mapOpen && (
-          <DayMap dayId={day.id} regions={day.regions} />
+          <DayMap dayId={day.id} center={day.mapCenter} zoom={day.mapZoom} regions={day.regions} />
         )}
       </div>
     </section>
