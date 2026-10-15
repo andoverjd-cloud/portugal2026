@@ -25,8 +25,8 @@ export default function Home() {
           <p className="text-sand/60 text-lg font-light mb-2">
             John · Lea
           </p>
-          <p className="text-terra-light/80 text-sm font-medium tracking-wide mb-8">
-            10th Anniversary
+          <p className="text-terra-light text-lg font-semibold tracking-widest mb-8 uppercase" style={{ letterSpacing: "0.25em" }}>
+            ✦ 10th Anniversary ✦
           </p>
           <div className="inline-flex flex-wrap gap-3 justify-center">
             {Object.values(hotels).map((hotel) => (

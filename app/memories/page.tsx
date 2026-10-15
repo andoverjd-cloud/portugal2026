@@ -39,9 +39,12 @@ export default async function MemoriesPage({
   return (
     <main className="min-h-screen" style={{ background: "var(--color-sand, #f5f0e8)" }}>
       <header
-        className="py-12 px-4 text-center"
+        className="py-12 px-4 text-center relative"
         style={{ background: "var(--color-azure, #1a3a5c)" }}
       >
+        <a href="/" className="absolute left-4 top-4 inline-flex items-center gap-1 text-xs hover:opacity-80 transition-opacity" style={{ color: "rgba(245,240,232,0.6)" }}>
+          ← Back
+        </a>
         <p className="text-xs uppercase tracking-[0.3em] mb-2" style={{ color: "rgba(196,98,45,0.9)" }}>
           Portugal · October 2026
         </p>
