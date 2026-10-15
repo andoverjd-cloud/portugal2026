@@ -1,5 +1,5 @@
-// Downloads Static Maps images at build time so Google is hit once per deploy,
-// not once per visitor. Images land in public/maps/ and are served from Vercel CDN.
+// Downloads Static Maps images at build time.
+// For multi-stop days, fetches actual road routes via Directions API.
 import { writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -14,121 +14,173 @@ if (!KEY) {
   process.exit(0);
 }
 
-const TYPE_COLORS = {
+const COLORS = {
   hotel:    "0x1a3a5c",
   activity: "0x1a3a5c",
   meal:     "0xc4622d",
   travel:   "0x94a3b8",
 };
 
-// Portugal days — kept in sync with lib/itinerary.ts
+// For each day: stops with lat/lng/type, map center & zoom.
+// route: array of {lat,lng} waypoints to drive between (in order).
+// If route is empty, just shows pins with no path.
 const days = [
   {
     id: "sunday",
-    center: { lat: 41.1, lng: -7.9 },
-    zoom: 8,
-    stops: [
-      { lat: 38.7742, lng: -9.1336, type: "travel" },  // Lisbon Airport
-      { lat: 41.0881, lng: -7.9064, type: "hotel" },   // Six Senses
+    center: { lat: 39.8, lng: -8.5 },
+    zoom: 6,
+    pins: [
+      { lat: 38.7742, lng: -9.1336, type: "travel", label: "LIS" },
+      { lat: 41.0881, lng: -7.9064, type: "hotel",  label: "SS"  },
+    ],
+    route: [
+      { lat: 38.7742, lng: -9.1336 },
+      { lat: 41.0881, lng: -7.9064 },
     ],
   },
   {
     id: "monday",
     center: { lat: 41.09, lng: -7.91 },
     zoom: 13,
-    stops: [
+    pins: [
       { lat: 41.0881, lng: -7.9064, type: "hotel" },
     ],
+    route: [],
   },
   {
     id: "tuesday",
     center: { lat: 41.09, lng: -7.91 },
     zoom: 13,
-    stops: [
+    pins: [
       { lat: 41.0881, lng: -7.9064, type: "hotel" },
     ],
+    route: [],
   },
   {
     id: "wednesday",
-    center: { lat: 39.8, lng: -7.6 },
+    center: { lat: 39.8, lng: -7.7 },
     zoom: 7,
-    stops: [
-      { lat: 41.0881, lng: -7.9064, type: "travel" },  // Six Senses (depart)
-      { lat: 38.4558, lng: -7.3827, type: "hotel" },   // Barrocal
+    pins: [
+      { lat: 41.0881, lng: -7.9064, type: "travel", label: "SS"  },
+      { lat: 38.4558, lng: -7.3827, type: "hotel",  label: "SLB" },
+    ],
+    route: [
+      { lat: 41.0881, lng: -7.9064 },
+      { lat: 38.4558, lng: -7.3827 },
     ],
   },
   {
     id: "thursday",
     center: { lat: 38.44, lng: -7.47 },
     zoom: 11,
-    stops: [
+    pins: [
       { lat: 38.4558, lng: -7.3827, type: "hotel" },
-      { lat: 38.4203, lng: -7.5381, type: "meal" },    // SAHIDA
+      { lat: 38.4203, lng: -7.5381, type: "meal"  },
+    ],
+    route: [
+      { lat: 38.4558, lng: -7.3827 },
+      { lat: 38.4203, lng: -7.5381 },
     ],
   },
   {
     id: "friday",
-    center: { lat: 38.2, lng: -7.7 },
+    center: { lat: 38.2,  lng: -7.7 },
     zoom: 9,
-    stops: [
-      { lat: 38.4558, lng: -7.3827, type: "travel" },  // Barrocal (depart)
-      { lat: 37.9631, lng: -7.9856, type: "hotel" },   // Malhadinha Nova
+    pins: [
+      { lat: 38.4558, lng: -7.3827, type: "travel", label: "SLB" },
+      { lat: 37.9631, lng: -7.9856, type: "hotel",  label: "MN"  },
+    ],
+    route: [
+      { lat: 38.4558, lng: -7.3827 },
+      { lat: 37.9631, lng: -7.9856 },
     ],
   },
   {
     id: "saturday",
     center: { lat: 37.96, lng: -7.99 },
     zoom: 13,
-    stops: [
+    pins: [
       { lat: 37.9631, lng: -7.9856, type: "hotel" },
     ],
+    route: [],
   },
   {
     id: "sunday-lisbon",
     center: { lat: 38.35, lng: -8.57 },
     zoom: 8,
-    stops: [
-      { lat: 37.9631, lng: -7.9856, type: "travel" },  // Malhadinha (depart)
-      { lat: 38.7104, lng: -9.1413, type: "hotel" },   // The Ivens
+    pins: [
+      { lat: 37.9631, lng: -7.9856, type: "travel", label: "MN"  },
+      { lat: 38.7104, lng: -9.1413, type: "hotel",  label: "LIS" },
+    ],
+    route: [
+      { lat: 37.9631, lng: -7.9856 },
+      { lat: 38.7104, lng: -9.1413 },
     ],
   },
   {
     id: "monday-lisbon",
     center: { lat: 38.717, lng: -9.14 },
     zoom: 13,
-    stops: [
+    pins: [
       { lat: 38.7104, lng: -9.1413, type: "hotel" },
     ],
+    route: [],
   },
 ];
 
-function buildUrl(day) {
-  const pinned = day.stops.filter((s) => s.lat && s.type !== "travel");
-  const travelPins = day.stops.filter((s) => s.type === "travel" && s.lat);
+// Fetch actual road polyline from Directions API
+async function getRoutePolyline(waypoints) {
+  if (waypoints.length < 2) return null;
+  const origin = `${waypoints[0].lat},${waypoints[0].lng}`;
+  const destination = `${waypoints[waypoints.length - 1].lat},${waypoints[waypoints.length - 1].lng}`;
+  const mids = waypoints.slice(1, -1).map(p => `${p.lat},${p.lng}`).join("|");
+  const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}${mids ? `&waypoints=${mids}` : ""}&mode=driving&key=${KEY}`;
+  const res = await fetch(url);
+  const json = await res.json();
+  if (json.status !== "OK") {
+    console.warn(`  Directions API: ${json.status} — falling back to straight line`);
+    return null;
+  }
+  // overview_polyline covers the entire route
+  return json.routes[0].overview_polyline.points;
+}
 
-  const parts = [
+async function buildMap(day) {
+  const markerParts = day.pins.map((p) => {
+    const label = p.label ? `|label:${p.label}` : "";
+    return `&markers=color:${COLORS[p.type]}|size:mid${label}|${p.lat},${p.lng}`;
+  });
+
+  let pathPart = "";
+  if (day.route.length >= 2) {
+    const polyline = await getRoutePolyline(day.route);
+    if (polyline) {
+      // enc: prefix tells Static Maps the path is an encoded polyline
+      pathPart = `&path=color:0x1a3a5cCC|weight:4|enc:${encodeURIComponent(polyline)}`;
+    } else {
+      // fallback: straight line
+      const pts = day.route.map(p => `${p.lat},${p.lng}`).join("|");
+      pathPart = `&path=color:0x1a3a5cCC|weight:4|${pts}`;
+    }
+  }
+
+  return [
     `https://maps.googleapis.com/maps/api/staticmap`,
     `?center=${day.center.lat},${day.center.lng}`,
     `&zoom=${day.zoom}`,
     `&size=640x400`,
     `&scale=2`,
-    `&maptype=terrain`,
+    `&maptype=roadmap`,
+    `&style=feature:poi|visibility:off`,
+    `&style=feature:transit|visibility:off`,
     `&key=${KEY}`,
-    ...pinned.map((s) => `&markers=color:${TYPE_COLORS[s.type]}|size:mid|${s.lat},${s.lng}`),
-    ...travelPins.map((s) => `&markers=color:${TYPE_COLORS.travel}|size:small|${s.lat},${s.lng}`),
-  ];
-
-  if (day.stops.length > 1) {
-    parts.push(
-      `&path=color:0x1a3a5c99|weight:3|${day.stops.map((p) => `${p.lat},${p.lng}`).join("|")}`
-    );
-  }
-
-  return parts.join("");
+    ...markerParts,
+    pathPart,
+  ].join("");
 }
 
 for (const day of days) {
-  const url = buildUrl(day);
+  const url = await buildMap(day);
   const outPath = join(OUT_DIR, `${day.id}.png`);
   console.log(`Fetching map for ${day.id}…`);
   const res = await fetch(url);
