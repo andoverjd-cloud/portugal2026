@@ -27,7 +27,7 @@ export default async function MemoriesPage({
 
   let blobs: Awaited<ReturnType<typeof list>>["blobs"] = [];
   try {
-    const result = await list({ prefix: `${TRIP_ID}/` });
+    const result = await list({ prefix: `${TRIP_ID}/`, token: process.env.BLOB_READ_WRITE_TOKEN });
     blobs = result.blobs.sort(
       (a, b) =>
         new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
