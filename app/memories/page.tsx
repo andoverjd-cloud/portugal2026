@@ -89,16 +89,16 @@ export default async function MemoriesPage({
         <a href="/" className="absolute left-4 top-4 inline-flex items-center gap-1 text-xs hover:opacity-80 transition-opacity" style={{ color: "rgba(245,240,232,0.6)" }}>
           ← Back
         </a>
-        <p className="text-xs uppercase tracking-[0.3em] mb-2" style={{ color: "rgba(196,98,45,0.9)" }}>
+        <p className="text-sm uppercase tracking-[0.3em] mb-3" style={{ color: "rgba(196,98,45,0.9)" }}>
           Portugal · October 2026
         </p>
         <h1
-          className="text-4xl font-bold mb-2"
+          className="text-5xl font-bold mb-3"
           style={{ fontFamily: "var(--font-serif, Georgia)", color: "#f5f0e8" }}
         >
           Memories
         </h1>
-        <p className="text-sm" style={{ color: "rgba(245,240,232,0.6)" }}>
+        <p className="text-base" style={{ color: "rgba(245,240,232,0.6)" }}>
           Send photos to{" "}
           <a href="mailto:draketrips@gmail.com" className="underline hover:opacity-80">
             draketrips@gmail.com
