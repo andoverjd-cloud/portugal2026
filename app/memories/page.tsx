@@ -1,29 +1,10 @@
 import { list } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 import { del } from "@vercel/blob";
-import { days } from "@/lib/itinerary";
 
 const TRIP_ID = "portugal2026";
 
 export const dynamic = "force-dynamic";
-
-const DAY_MAP: Record<string, { label: string; subtitle: string }> = {};
-for (const day of days) {
-  const d = new Date(day.date);
-  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  DAY_MAP[key] = { label: day.label ?? "", subtitle: day.subtitle ?? "" };
-}
-
-function photoDateKey(pathname: string): string | null {
-  const m = pathname.match(/\/(\d{4}-\d{2}-\d{2})T/);
-  return m ? m[1] : null;
-}
-
-function formatDividerDate(dateKey: string) {
-  const [y, mo, d] = dateKey.split("-").map(Number);
-  const dt = new Date(y, mo - 1, d);
-  return dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-}
 
 async function deletePhoto(formData: FormData) {
   "use server";
@@ -48,31 +29,11 @@ export default async function MemoriesPage({
   let listError: string | null = null;
   try {
     const result = await list({ prefix: `${TRIP_ID}/`, token: process.env.BLOB_READ_WRITE_TOKEN });
-    const photoDate = (pathname: string) => {
-      const m = pathname.match(/\/(\d{4}-\d{2}-\d{2}T\d{6})/);
-      return m ? m[1].replace("T", " ").replace(/(\d{2})(\d{2})(\d{2})$/, "$1:$2:$3") : null;
-    };
-    blobs = result.blobs.sort((a, b) => {
-      const da = photoDate(a.pathname) ?? new Date(a.uploadedAt).toISOString();
-      const db = photoDate(b.pathname) ?? new Date(b.uploadedAt).toISOString();
-      return da.localeCompare(db);
-    });
+    blobs = result.blobs.sort((a, b) => a.pathname.localeCompare(b.pathname));
   } catch (e) {
     listError = e instanceof Error ? e.message : String(e);
     console.error("Blob list error:", listError);
   }
-
-  const groups: { dateKey: string | null; blobs: typeof blobs }[] = [];
-  for (const blob of blobs) {
-    const key = photoDateKey(blob.pathname);
-    const last = groups[groups.length - 1];
-    if (last && last.dateKey === key) {
-      last.blobs.push(blob);
-    } else {
-      groups.push({ dateKey: key, blobs: [blob] });
-    }
-  }
-  groups.reverse();
 
   return (
     <main className="min-h-screen" style={{ background: "var(--color-sand, #f5f0e8)" }}>
@@ -117,56 +78,32 @@ export default async function MemoriesPage({
             </p>
           </div>
         ) : (
-          <div className="space-y-10">
-            {groups.map(({ dateKey, blobs: groupBlobs }) => {
-              const dayInfo = dateKey ? DAY_MAP[dateKey] : null;
-              const formattedDate = dateKey ? formatDividerDate(dateKey) : "Unknown date";
-              return (
-                <div key={dateKey ?? "unknown"}>
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="flex-1 h-px" style={{ background: "var(--color-azure, #1a3a5c)", opacity: 0.2 }} />
-                    <div className="text-center">
-                      <p className="text-sm font-semibold" style={{ color: "var(--color-azure, #1a3a5c)" }}>
-                        {formattedDate}
-                      </p>
-                      {dayInfo && (
-                        <p className="text-xs mt-0.5" style={{ color: "var(--color-slate, #2c3e50)", opacity: 0.6 }}>
-                          {dayInfo.subtitle}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex-1 h-px" style={{ background: "var(--color-azure, #1a3a5c)", opacity: 0.2 }} />
-                  </div>
-                  <div className="columns-2 md:columns-3 gap-3 space-y-3">
-                    {groupBlobs.map((blob) => (
-                      <div key={blob.url} className="relative break-inside-avoid group">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={blob.url}
-                          alt=""
-                          className="w-full rounded-lg shadow-sm"
-                          loading="lazy"
-                        />
-                        {isAdmin && (
-                          <form action={deletePhoto} className="absolute top-2 right-2">
-                            <input type="hidden" name="url" value={blob.url} />
-                            <input type="hidden" name="secret" value={params.admin} />
-                            <button
-                              type="submit"
-                              className="w-7 h-7 rounded-full text-white text-sm font-bold flex items-center justify-center shadow opacity-80 hover:opacity-100 transition-opacity"
-                              style={{ background: "rgba(180,30,30,0.85)" }}
-                              title="Delete"
-                            >
-                              ✕
-                            </button>
-                          </form>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="columns-2 md:columns-3 gap-3 space-y-3">
+            {blobs.map((blob) => (
+              <div key={blob.url} className="relative break-inside-avoid group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={blob.url}
+                  alt=""
+                  className="w-full rounded-lg shadow-sm"
+                  loading="lazy"
+                />
+                {isAdmin && (
+                  <form action={deletePhoto} className="absolute top-2 right-2">
+                    <input type="hidden" name="url" value={blob.url} />
+                    <input type="hidden" name="secret" value={params.admin} />
+                    <button
+                      type="submit"
+                      className="w-7 h-7 rounded-full text-white text-sm font-bold flex items-center justify-center shadow opacity-80 hover:opacity-100 transition-opacity"
+                      style={{ background: "rgba(180,30,30,0.85)" }}
+                      title="Delete"
+                    >
+                      ✕
+                    </button>
+                  </form>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
