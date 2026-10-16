@@ -1,8 +1,41 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 type BlobItem = { url: string; pathname: string };
+
+function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.92)" }}
+      onClick={onClose}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt=""
+        className="max-w-full max-h-full object-contain"
+        style={{ maxWidth: "95vw", maxHeight: "95vh" }}
+        onClick={(e) => e.stopPropagation()}
+        draggable={false}
+      />
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center text-white text-lg font-bold"
+        style={{ background: "rgba(255,255,255,0.15)" }}
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
 
 function AdminLock({ isAdmin }: { isAdmin: boolean }) {
   const [open, setOpen] = useState(false);
@@ -66,6 +99,7 @@ export function MemoriesGrid({
 }) {
   const [blobs, setBlobs] = useState(initialBlobs);
   const [saving, setSaving] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const dragIndex = useRef<number | null>(null);
   const dragOverIndex = useRef<number | null>(null);
 
@@ -107,6 +141,7 @@ export function MemoriesGrid({
 
   return (
     <>
+      {lightboxUrl && <Lightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
       <AdminLock isAdmin={isAdmin} />
       {saving && (
         <p className="text-center text-xs mb-4" style={{ color: "var(--color-azure, #1a3a5c)", opacity: 0.6 }}>
@@ -129,8 +164,10 @@ export function MemoriesGrid({
               src={blob.url}
               alt=""
               className="w-full rounded-lg shadow-sm object-cover aspect-square"
+              style={{ cursor: "pointer" }}
               loading="lazy"
               draggable={false}
+              onClick={() => setLightboxUrl(blob.url)}
             />
             {isAdmin && (
               <button
