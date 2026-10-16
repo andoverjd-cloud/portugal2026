@@ -16,13 +16,24 @@ async function saveOrder(pathnames: string[]) {
   });
 }
 
-async function deletePhoto(url: string, secret: string) {
+async function deletePhoto(url: string, pathname: string, secret: string) {
   "use server";
-  const { del, revalidatePath } = await import("@vercel/blob").then(
-    async (m) => ({ del: m.del, revalidatePath: (await import("next/cache")).revalidatePath })
-  );
+  const { del, list: listBlobs, put: putBlob } = await import("@vercel/blob");
+  const { revalidatePath } = await import("next/cache");
   if (secret !== process.env.MEMORIES_ADMIN_SECRET) return;
-  await del(url, { token: process.env.BLOB_READ_WRITE_TOKEN });
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  await del(url, { token });
+  try {
+    const result = await listBlobs({ prefix: `${TRIP_ID}/`, token });
+    const orderBlob = result.blobs.find((b) => b.pathname === ORDER_KEY);
+    if (orderBlob) {
+      const res = await fetch(orderBlob.url);
+      const order: string[] = await res.json();
+      await putBlob(ORDER_KEY, JSON.stringify(order.filter((p) => p !== pathname)), {
+        access: "public", token, addRandomSuffix: false, allowOverwrite: true,
+      });
+    }
+  } catch { /* order cleanup is best-effort */ }
   revalidatePath("/memories");
 }
 

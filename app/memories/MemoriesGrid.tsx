@@ -62,7 +62,7 @@ export function MemoriesGrid({
   isAdmin: boolean;
   adminSecret: string;
   saveOrder: (pathnames: string[]) => Promise<void>;
-  deletePhoto: (url: string, secret: string) => Promise<void>;
+  deletePhoto: (url: string, pathname: string, secret: string) => Promise<void>;
 }) {
   const [blobs, setBlobs] = useState(initialBlobs);
   const [saving, setSaving] = useState(false);
@@ -99,8 +99,9 @@ export function MemoriesGrid({
     }
   }
 
-  async function handleDelete(url: string) {
-    await deletePhoto(url, adminSecret);
+  async function handleDelete(url: string, pathname: string) {
+    if (!confirm("Delete this photo?")) return;
+    await deletePhoto(url, pathname, adminSecret);
     setBlobs((prev) => prev.filter((b) => b.url !== url));
   }
 
@@ -133,7 +134,7 @@ export function MemoriesGrid({
             />
             {isAdmin && (
               <button
-                onClick={() => handleDelete(blob.url)}
+                onClick={() => handleDelete(blob.url, blob.pathname)}
                 className="absolute top-2 right-2 w-7 h-7 rounded-full text-white text-sm font-bold flex items-center justify-center shadow opacity-0 group-hover:opacity-80 hover:!opacity-100 transition-opacity"
                 style={{ background: "rgba(180,30,30,0.85)" }}
                 title="Delete"
