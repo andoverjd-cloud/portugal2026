@@ -4,6 +4,53 @@ import { useState, useRef } from "react";
 
 type BlobItem = { url: string; pathname: string };
 
+function AdminLock({ isAdmin }: { isAdmin: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+
+  if (isAdmin) return null;
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (value.trim()) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("admin", value.trim());
+      window.location.href = url.toString();
+    }
+  }
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50">
+      {open ? (
+        <form onSubmit={submit} className="flex items-center gap-2 bg-white rounded-full shadow-lg px-3 py-2 border border-gray-200">
+          <input
+            autoFocus
+            type="password"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="Admin secret"
+            className="text-sm outline-none w-36 bg-transparent"
+          />
+          <button type="submit" className="text-xs font-semibold" style={{ color: "var(--color-azure, #1a3a5c)" }}>
+            Go
+          </button>
+          <button type="button" onClick={() => setOpen(false)} className="text-xs text-gray-400 hover:text-gray-600">
+            ✕
+          </button>
+        </form>
+      ) : (
+        <button
+          onClick={() => setOpen(true)}
+          className="w-9 h-9 rounded-full bg-white shadow-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+          title="Admin"
+        >
+          🔒
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function MemoriesGrid({
   initialBlobs,
   isAdmin,
@@ -59,6 +106,7 @@ export function MemoriesGrid({
 
   return (
     <>
+      <AdminLock isAdmin={isAdmin} />
       {saving && (
         <p className="text-center text-xs mb-4" style={{ color: "var(--color-azure, #1a3a5c)", opacity: 0.6 }}>
           Saving order…
