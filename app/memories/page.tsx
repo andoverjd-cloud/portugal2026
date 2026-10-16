@@ -1,17 +1,28 @@
-import { list } from "@vercel/blob";
-import { revalidatePath } from "next/cache";
-import { del } from "@vercel/blob";
+import { list, put } from "@vercel/blob";
+import { MemoriesGrid } from "./MemoriesGrid";
 
 const TRIP_ID = "portugal2026";
+const ORDER_KEY = `${TRIP_ID}/_order.json`;
 
 export const dynamic = "force-dynamic";
 
-async function deletePhoto(formData: FormData) {
+async function saveOrder(pathnames: string[]) {
   "use server";
-  const url = formData.get("url") as string;
-  const secret = formData.get("secret") as string;
+  await put(ORDER_KEY, JSON.stringify(pathnames), {
+    access: "public",
+    token: process.env.BLOB_READ_WRITE_TOKEN,
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
+}
+
+async function deletePhoto(url: string, secret: string) {
+  "use server";
+  const { del, revalidatePath } = await import("@vercel/blob").then(
+    async (m) => ({ del: m.del, revalidatePath: (await import("next/cache")).revalidatePath })
+  );
   if (secret !== process.env.MEMORIES_ADMIN_SECRET) return;
-  await del(url);
+  await del(url, { token: process.env.BLOB_READ_WRITE_TOKEN });
   revalidatePath("/memories");
 }
 
@@ -21,15 +32,38 @@ export default async function MemoriesPage({
   searchParams: Promise<{ admin?: string }>;
 }) {
   const params = await searchParams;
-  const isAdmin =
+  const isAdmin = !!(
     process.env.MEMORIES_ADMIN_SECRET &&
-    params.admin === process.env.MEMORIES_ADMIN_SECRET;
+    params.admin === process.env.MEMORIES_ADMIN_SECRET
+  );
 
-  let blobs: Awaited<ReturnType<typeof list>>["blobs"] = [];
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  let blobs: { url: string; pathname: string }[] = [];
   let listError: string | null = null;
+  let savedOrder: string[] | null = null;
+
   try {
-    const result = await list({ prefix: `${TRIP_ID}/`, token: process.env.BLOB_READ_WRITE_TOKEN });
-    blobs = result.blobs.sort((a, b) => a.pathname.localeCompare(b.pathname));
+    const result = await list({ prefix: `${TRIP_ID}/`, token });
+    const photos = result.blobs.filter((b) => !b.pathname.endsWith("_order.json"));
+
+    const orderBlob = result.blobs.find((b) => b.pathname === ORDER_KEY);
+    if (orderBlob) {
+      try {
+        const res = await fetch(orderBlob.url);
+        savedOrder = await res.json();
+      } catch {
+        // fall back to pathname sort
+      }
+    }
+
+    if (savedOrder) {
+      const map = new Map(photos.map((b) => [b.pathname, b]));
+      const ordered = savedOrder.flatMap((p) => (map.has(p) ? [map.get(p)!] : []));
+      const newPhotos = photos.filter((b) => !savedOrder!.includes(b.pathname));
+      blobs = [...ordered, ...newPhotos];
+    } else {
+      blobs = photos.sort((a, b) => a.pathname.localeCompare(b.pathname));
+    }
   } catch (e) {
     listError = e instanceof Error ? e.message : String(e);
     console.error("Blob list error:", listError);
@@ -78,33 +112,13 @@ export default async function MemoriesPage({
             </p>
           </div>
         ) : (
-          <div className="columns-2 md:columns-3 gap-3 space-y-3">
-            {blobs.map((blob) => (
-              <div key={blob.url} className="relative break-inside-avoid group">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={blob.url}
-                  alt=""
-                  className="w-full rounded-lg shadow-sm"
-                  loading="lazy"
-                />
-                {isAdmin && (
-                  <form action={deletePhoto} className="absolute top-2 right-2">
-                    <input type="hidden" name="url" value={blob.url} />
-                    <input type="hidden" name="secret" value={params.admin} />
-                    <button
-                      type="submit"
-                      className="w-7 h-7 rounded-full text-white text-sm font-bold flex items-center justify-center shadow opacity-80 hover:opacity-100 transition-opacity"
-                      style={{ background: "rgba(180,30,30,0.85)" }}
-                      title="Delete"
-                    >
-                      ✕
-                    </button>
-                  </form>
-                )}
-              </div>
-            ))}
-          </div>
+          <MemoriesGrid
+            initialBlobs={blobs}
+            isAdmin={isAdmin}
+            adminSecret={params.admin ?? ""}
+            saveOrder={saveOrder}
+            deletePhoto={deletePhoto}
+          />
         )}
       </div>
 
