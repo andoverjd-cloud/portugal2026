@@ -1,7 +1,21 @@
 import { days, hotels } from "@/lib/itinerary";
 import DaySection from "@/components/DaySection";
+import { list } from "@vercel/blob";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+const TRIP_ID = "portugal2026";
+const TRIP_START = new Date("2026-10-18T00:00:00-05:00");
+
+export default async function Home() {
+  const today = new Date();
+  let showMemories = today >= TRIP_START;
+  if (!showMemories) {
+    try {
+      const result = await list({ prefix: `${TRIP_ID}/`, token: process.env.BLOB_READ_WRITE_TOKEN, limit: 1 });
+      showMemories = result.blobs.some((b) => !b.pathname.endsWith("_order.json"));
+    } catch { /* show=false is fine */ }
+  }
   return (
     <main className="min-h-screen">
       {/* Hero */}
@@ -41,9 +55,11 @@ export default function Home() {
                 {hotel.name}
               </a>
             ))}
-            <a href="/memories" className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 text-sand/80 text-xs hover:text-sand transition-colors">
-              <span>📸</span> Memories
-            </a>
+            {showMemories && (
+              <a href="/memories" className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 text-sand/80 text-xs hover:text-sand transition-colors">
+                <span>📸</span> Memories
+              </a>
+            )}
           </div>
         </div>
       </header>
