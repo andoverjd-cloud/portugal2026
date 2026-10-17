@@ -4,12 +4,19 @@ import { useState, useRef, useEffect } from "react";
 
 type BlobItem = { url: string; pathname: string };
 
-function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
+function Lightbox({ url, index, total, onClose, onPrev, onNext }: {
+  url: string; index: number; total: number;
+  onClose: () => void; onPrev: () => void; onNext: () => void;
+}) {
   useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") onPrev();
+      if (e.key === "ArrowRight") onNext();
+    }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, onPrev, onNext]);
 
   return (
     <div
@@ -22,7 +29,7 @@ function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
         src={url}
         alt=""
         className="max-w-full max-h-full object-contain"
-        style={{ maxWidth: "95vw", maxHeight: "95vh" }}
+        style={{ maxWidth: "85vw", maxHeight: "90vh" }}
         onClick={(e) => e.stopPropagation()}
         draggable={false}
       />
@@ -33,6 +40,27 @@ function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
       >
         ✕
       </button>
+      {index > 0 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onPrev(); }}
+          className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center text-white text-xl"
+          style={{ background: "rgba(255,255,255,0.15)" }}
+        >
+          ‹
+        </button>
+      )}
+      {index < total - 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onNext(); }}
+          className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center text-white text-xl"
+          style={{ background: "rgba(255,255,255,0.15)" }}
+        >
+          ›
+        </button>
+      )}
+      <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+        {index + 1} / {total}
+      </p>
     </div>
   );
 }
@@ -64,7 +92,7 @@ function AdminLock({ isAdmin }: { isAdmin: boolean }) {
             placeholder="Admin secret"
             className="text-sm outline-none w-36 bg-transparent"
           />
-          <button type="submit" className="text-xs font-semibold" style={{ color: "var(--color-azure, #1a3a5c)" }}>
+          <button type="submit" className="text-xs font-semibold" style={{ color: "var(--color-ocean, #0077b6)" }}>
             Go
           </button>
           <button type="button" onClick={() => setOpen(false)} className="text-xs text-gray-400 hover:text-gray-600">
@@ -99,7 +127,7 @@ export function MemoriesGrid({
 }) {
   const [blobs, setBlobs] = useState(initialBlobs);
   const [saving, setSaving] = useState(false);
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const dragIndex = useRef<number | null>(null);
   const dragOverIndex = useRef<number | null>(null);
 
@@ -141,10 +169,19 @@ export function MemoriesGrid({
 
   return (
     <>
-      {lightboxUrl && <Lightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
+      {lightboxIndex !== null && (
+        <Lightbox
+          url={blobs[lightboxIndex].url}
+          index={lightboxIndex}
+          total={blobs.length}
+          onClose={() => setLightboxIndex(null)}
+          onPrev={() => setLightboxIndex((i) => Math.max(0, (i ?? 0) - 1))}
+          onNext={() => setLightboxIndex((i) => Math.min(blobs.length - 1, (i ?? 0) + 1))}
+        />
+      )}
       <AdminLock isAdmin={isAdmin} />
       {saving && (
-        <p className="text-center text-xs mb-4" style={{ color: "var(--color-azure, #1a3a5c)", opacity: 0.6 }}>
+        <p className="text-center text-xs mb-4" style={{ color: "var(--color-ocean, #0077b6)", opacity: 0.6 }}>
           Saving order…
         </p>
       )}
@@ -167,7 +204,7 @@ export function MemoriesGrid({
               style={{ cursor: "pointer" }}
               loading="lazy"
               draggable={false}
-              onClick={() => setLightboxUrl(blob.url)}
+              onClick={() => setLightboxIndex(i)}
             />
             {isAdmin && (
               <button
