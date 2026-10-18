@@ -163,12 +163,6 @@ export const days: Day[] = [
         tags: ["Lunch"],
       },
       {
-        time: "1:00 PM",
-        name: "Walk and Taste Port Knox",
-        description: "Guided walk through the estate with an immersive Port wine tasting experience.",
-        type: "activity",
-      },
-      {
         time: "3:30 PM",
         name: "Wine Tasting with Cheeses",
         description: "Curated tasting of Douro Valley wines paired with local Portuguese cheeses at the resort.",
