@@ -90,7 +90,7 @@ export const days: Day[] = [
         type: "activity",
       },
       {
-        time: "7:00 PM",
+        time: "7:30 PM",
         name: "DOC Restaurant",
         description: "Dinner at the resort's signature restaurant — contemporary Portuguese cuisine with panoramic Douro Valley views.",
         type: "meal",
