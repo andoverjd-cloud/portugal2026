@@ -28,8 +28,8 @@ function Lightbox({ url, index, total, onClose, onPrev, onNext }: {
       <img
         src={url}
         alt=""
-        className="max-w-full max-h-full object-contain"
-        style={{ maxWidth: "85vw", maxHeight: "90vh" }}
+        className="object-contain"
+        style={{ width: "auto", height: "auto", maxWidth: "85vw", maxHeight: "90vh", minWidth: "min(85vw, 600px)", minHeight: "min(70vh, 400px)" }}
         onClick={(e) => e.stopPropagation()}
         draggable={false}
       />
