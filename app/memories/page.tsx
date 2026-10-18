@@ -98,12 +98,6 @@ export default async function MemoriesPage({
         >
           Memories
         </h1>
-        <p className="text-base" style={{ color: "rgba(245,240,232,0.6)" }}>
-          Send photos to{" "}
-          <a href="mailto:draketrips@gmail.com" className="underline hover:opacity-80">
-            draketrips@gmail.com
-          </a>
-        </p>
       </header>
 
       <div className="max-w-5xl mx-auto px-4 py-10">
@@ -114,13 +108,7 @@ export default async function MemoriesPage({
           <div className="text-center py-20" style={{ color: "var(--color-slate, #2c3e50)", opacity: 0.5 }}>
             <p className="text-5xl mb-4">📸</p>
             <p className="text-lg font-medium">No memories yet</p>
-            <p className="text-sm mt-2">
-              Email photos to{" "}
-              <a href="mailto:draketrips@gmail.com" className="underline">
-                draketrips@gmail.com
-              </a>{" "}
-              and they&apos;ll appear here automatically.
-            </p>
+            <p className="text-sm mt-2">Photos will appear here once added.</p>
           </div>
         ) : (
           <MemoriesGrid
