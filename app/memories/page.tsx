@@ -1,45 +1,49 @@
-import { list, put } from "@vercel/blob";
+import { list, del } from "@vercel/blob";
+import { neon } from "@neondatabase/serverless";
 import { MemoriesGrid } from "./MemoriesGrid";
 import type { OrderItem, DayInfo } from "./MemoriesGrid";
 import { days as itineraryDays } from "../../lib/itinerary";
 
 const TRIP_ID = "portugal2026";
-const ORDER_KEY = `${TRIP_ID}/_order.json`;
 
 export const dynamic = "force-dynamic";
 
+function getDb() {
+  return neon(process.env.DATABASE_URL!);
+}
+
 async function saveOrder(items: OrderItem[]) {
   "use server";
-  await put(ORDER_KEY, JSON.stringify(items), {
-    access: "public",
-    token: process.env.BLOB_READ_WRITE_TOKEN,
-    addRandomSuffix: false,
-    allowOverwrite: true,
+  const sql = getDb();
+  const secret = process.env.MEMORIES_ADMIN_SECRET!;
+  const base = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "https://portugal2026.thedrakes.info";
+  await fetch(`${base}/api/memories/metadata`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      secret,
+      trip_id: TRIP_ID,
+      items: items.map((item, idx) => ({
+        pathname: item.pathname,
+        day: item.day ?? null,
+        caption: item.caption ?? null,
+        sort_order: idx,
+      })),
+    }),
   });
 }
 
 async function deletePhoto(url: string, pathname: string, secret: string) {
   "use server";
-  const { del, list: listBlobs, put: putBlob } = await import("@vercel/blob");
   const { revalidatePath } = await import("next/cache");
   if (secret !== process.env.MEMORIES_ADMIN_SECRET) return;
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   await del(url, { token });
-  try {
-    const result = await listBlobs({ prefix: `${TRIP_ID}/`, token });
-    const orderBlob = result.blobs.find((b) => b.pathname === ORDER_KEY);
-    if (orderBlob) {
-      const res = await fetch(orderBlob.url);
-      const raw = await res.json();
-      // Handle both old string[] and new OrderItem[] formats
-      const items: OrderItem[] = Array.isArray(raw) && raw.length > 0 && typeof raw[0] === "string"
-        ? (raw as string[]).map((p) => ({ pathname: p }))
-        : (raw as OrderItem[]);
-      await putBlob(ORDER_KEY, JSON.stringify(items.filter((item) => item.pathname !== pathname)), {
-        access: "public", token, addRandomSuffix: false, allowOverwrite: true,
-      });
-    }
-  } catch { /* order cleanup is best-effort */ }
+  // Remove from DB
+  const sql = getDb();
+  await sql`DELETE FROM photo_metadata WHERE trip_id = ${TRIP_ID} AND pathname = ${pathname}`;
   revalidatePath("/memories");
 }
 
@@ -59,51 +63,52 @@ export default async function MemoriesPage({
   let listError: string | null = null;
 
   try {
+    // Get all photos from Blob
     const result = await list({ prefix: `${TRIP_ID}/`, token });
     const photos = result.blobs.filter((b) => !b.pathname.endsWith("_order.json"));
 
-    // Parse order file — handles both old string[] and new OrderItem[] formats
-    const orderBlob = result.blobs.find((b) => b.pathname === ORDER_KEY);
-    let orderItems: OrderItem[] = [];
-    if (orderBlob) {
-      try {
-        const res = await fetch(orderBlob.url);
-        const raw = await res.json();
-        if (Array.isArray(raw) && raw.length > 0 && typeof raw[0] === "string") {
-          orderItems = (raw as string[]).map((p) => ({ pathname: p }));
-        } else {
-          orderItems = raw as OrderItem[];
-        }
-      } catch { /* fall through to pathname sort */ }
-    }
+    // Get metadata from Postgres (source of truth)
+    const sql = getDb();
+    const rows = await sql`
+      SELECT pathname, day, caption, sort_order
+      FROM photo_metadata
+      WHERE trip_id = ${TRIP_ID}
+      ORDER BY sort_order ASC NULLS LAST, created_at ASC
+    `;
 
-    if (orderItems.length > 0) {
-      const metaMap = new Map(orderItems.map((item) => [item.pathname, item]));
-      const urlMap = new Map(photos.map((b) => [b.pathname, b.url]));
+    const urlMap = new Map(photos.map((b) => [b.pathname, b.url]));
 
-      // Ordered photos (in saved order)
-      const ordered = orderItems
-        .filter((item) => urlMap.has(item.pathname))
-        .map((item) => ({ url: urlMap.get(item.pathname)!, ...item }));
+    if (rows.length > 0) {
+      const metaMap = new Map(rows.map((r) => [r.pathname, r]));
 
-      // New photos not in saved order → append without day
-      const orderedPathnames = new Set(orderItems.map((i) => i.pathname));
+      // Ordered photos (in DB order)
+      const ordered = rows
+        .filter((r) => urlMap.has(r.pathname))
+        .map((r) => ({
+          url: urlMap.get(r.pathname)!,
+          pathname: r.pathname,
+          ...(r.day ? { day: r.day } : {}),
+          ...(r.caption ? { caption: r.caption } : {}),
+        }));
+
+      // New photos not yet in DB — append without day
+      const dbPathnames = new Set(rows.map((r) => r.pathname));
       const newPhotos = photos
-        .filter((b) => !orderedPathnames.has(b.pathname))
+        .filter((b) => !dbPathnames.has(b.pathname))
         .map((b) => ({ url: b.url, pathname: b.pathname }));
 
       blobs = [...ordered, ...newPhotos];
     } else {
+      // No DB entries yet — fall back to blob list order
       blobs = photos
         .sort((a, b) => a.pathname.localeCompare(b.pathname))
         .map((b) => ({ url: b.url, pathname: b.pathname }));
     }
   } catch (e) {
     listError = e instanceof Error ? e.message : String(e);
-    console.error("Blob list error:", listError);
+    console.error("Memories load error:", listError);
   }
 
-  // Build DayInfo list from itinerary
   const days: DayInfo[] = itineraryDays.map((d) => ({
     id: d.id,
     label: d.label,
