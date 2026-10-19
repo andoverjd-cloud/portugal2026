@@ -112,8 +112,8 @@ export const days: Day[] = [
     stops: [
       {
         time: "Morning",
-        name: "Breakfast & Explore the Town",
-        description: "Morning breakfast at the resort followed by time exploring the local village and surroundings.",
+        name: "Breakfast & Explore the Property",
+        description: "Morning breakfast at the resort followed by time exploring the Six Senses estate — vineyards, gardens, and river views.",
         type: "activity",
         tags: ["Breakfast"],
       },
