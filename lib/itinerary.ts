@@ -156,10 +156,10 @@ export const days: Day[] = [
         type: "activity",
       },
       {
-        time: "12:00 PM",
-        name: "Lunch",
-        description: "Lunch at the resort.",
-        type: "meal",
+        time: "12:30 PM",
+        name: "Portuguese Kitchen Table",
+        description: "90-minute immersive cooking experience at the resort — a hands-on introduction to the flavours and techniques of traditional Portuguese cuisine.",
+        type: "activity",
         tags: ["Lunch"],
       },
       {
