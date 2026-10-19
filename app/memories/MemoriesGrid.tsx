@@ -12,6 +12,7 @@ function Lightbox({ url, caption, index, total, onClose, onPrev, onNext }: {
 }) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      e.stopImmediatePropagation();
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowLeft") onPrev();
       if (e.key === "ArrowRight") onNext();
@@ -22,7 +23,7 @@ function Lightbox({ url, caption, index, total, onClose, onPrev, onNext }: {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-[60] flex items-center justify-center"
       style={{ background: "rgba(0,0,0,0.92)" }}
       onClick={onClose}
     >
@@ -64,9 +65,11 @@ function Lightbox({ url, caption, index, total, onClose, onPrev, onNext }: {
   );
 }
 
-function AdminLock({ isAdmin }: { isAdmin: boolean }) {
+function AdminLock({ isAdmin, hidden }: { isAdmin: boolean; hidden?: boolean }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
+
+  if (hidden) return null;
 
   if (isAdmin) {
     return (
@@ -141,10 +144,13 @@ export function MemoriesGrid({
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [editingCaption, setEditingCaption] = useState<string | null>(null);
   const [captionDraft, setCaptionDraft] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // Drag state
   const dragSrc = useRef<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ day: string | null; before: string | null } | null>(null);
+
+  const isSelecting = selected.size > 0;
 
   async function persist(next: BlobItem[]) {
     setSaving(true);
@@ -159,6 +165,24 @@ export function MemoriesGrid({
     }
   }
 
+  function toggleSelect(pathname: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(pathname)) next.delete(pathname);
+      else next.add(pathname);
+      return next;
+    });
+  }
+
+  async function moveSelectedToDay(dayId: string | null) {
+    const next = blobs.map(b =>
+      selected.has(b.pathname) ? { ...b, day: dayId ?? undefined } : b
+    );
+    setBlobs(next);
+    setSelected(new Set());
+    await persist(next);
+  }
+
   function handleDragStart(pathname: string) {
     dragSrc.current = pathname;
   }
@@ -171,7 +195,6 @@ export function MemoriesGrid({
 
   function handleDragOverSection(e: React.DragEvent, dayId: string | null) {
     e.preventDefault();
-    // Only set section-level target if not hovering a specific photo
     setDropTarget(prev => (prev?.before ? prev : { day: dayId, before: null }));
   }
 
@@ -198,7 +221,6 @@ export function MemoriesGrid({
         ? [...without.slice(0, idx), updated, ...without.slice(idx)]
         : [...without, updated];
     } else {
-      // Append after the last item currently in the target day
       const lastIdx = without.reduce<number>((last, b, i) =>
         (b.day ?? null) === targetDay ? i : last, -1);
       next = lastIdx >= 0
@@ -233,7 +255,7 @@ export function MemoriesGrid({
   }));
   const unassigned = blobs.filter(b => !b.day || !validDayIds.has(b.day));
 
-  // Flat ordered list for lightbox (grouped days first, then unassigned)
+  // Flat ordered list for lightbox
   const allBlobs = [...grouped.flatMap(g => g.items), ...unassigned];
 
   function renderGrid(items: BlobItem[], dayId: string | null) {
@@ -252,9 +274,9 @@ export function MemoriesGrid({
           const flatIdx = allBlobs.findIndex(b => b.pathname === blob.pathname);
           const isDropBefore = dropTarget?.before === blob.pathname;
           const isDragging = dragSrc.current === blob.pathname;
+          const isSelected = selected.has(blob.pathname);
           return (
             <div key={blob.pathname} className="relative flex flex-col">
-              {/* Drop-before indicator */}
               {isDropBefore && isAdmin && (
                 <div
                   className="absolute -left-1.5 top-0 bottom-0 w-1 rounded-full z-10"
@@ -263,21 +285,40 @@ export function MemoriesGrid({
               )}
               <div
                 className="relative group"
-                draggable={isAdmin}
+                draggable={isAdmin && !isSelecting}
                 onDragStart={() => handleDragStart(blob.pathname)}
                 onDragOver={(e) => handleDragOverPhoto(e, blob.pathname, blob.day)}
-                style={isAdmin ? { cursor: "grab", opacity: isDragging ? 0.35 : 1, transition: "opacity 0.15s" } : undefined}
+                style={isAdmin && !isSelecting ? { cursor: "grab", opacity: isDragging ? 0.35 : 1, transition: "opacity 0.15s" } : undefined}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={blob.url}
                   alt={blob.caption || ""}
                   className="w-full rounded-lg shadow-sm object-cover aspect-square"
-                  style={{ cursor: "pointer" }}
+                  style={{
+                    cursor: "pointer",
+                    ...(isSelected ? { outline: "3px solid var(--color-ocean, #0077b6)", outlineOffset: "2px" } : {}),
+                  }}
                   loading="lazy"
                   draggable={false}
-                  onClick={() => !isDragging && setLightboxIndex(flatIdx)}
+                  onClick={() => {
+                    if (isSelecting && isAdmin) { toggleSelect(blob.pathname); return; }
+                    if (!isDragging) setLightboxIndex(flatIdx);
+                  }}
                 />
+                {/* Selection checkbox in admin mode */}
+                {isAdmin && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleSelect(blob.pathname); }}
+                    className="absolute bottom-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow transition-opacity"
+                    style={{
+                      background: isSelected ? "var(--color-ocean, #0077b6)" : "rgba(255,255,255,0.85)",
+                      color: isSelected ? "white" : "rgba(0,0,0,0.4)",
+                      opacity: isSelecting ? 1 : 0,
+                    }}
+                    title={isSelected ? "Deselect" : "Select"}
+                  >{isSelected ? "✓" : "○"}</button>
+                )}
                 {isAdmin && (
                   <>
                     <button
@@ -295,7 +336,6 @@ export function MemoriesGrid({
                   </>
                 )}
               </div>
-              {/* Caption editing */}
               {editingCaption === blob.pathname ? (
                 <div className="mt-1.5 px-0.5">
                   <textarea
@@ -328,7 +368,6 @@ export function MemoriesGrid({
             </div>
           );
         })}
-        {/* Empty drop zone hint */}
         {items.length === 0 && isAdmin && (
           <div
             className="col-span-full rounded-xl border-2 border-dashed py-8 text-center text-xs"
@@ -354,7 +393,36 @@ export function MemoriesGrid({
           onNext={() => setLightboxIndex(i => Math.min(allBlobs.length - 1, (i ?? 0) + 1))}
         />
       )}
-      <AdminLock isAdmin={isAdmin} />
+      <AdminLock isAdmin={isAdmin} hidden={lightboxIndex !== null} />
+
+      {/* Multi-select action bar */}
+      {isSelecting && isAdmin && (
+        <div
+          className="sticky top-0 z-40 mb-6 rounded-2xl px-4 py-3 flex flex-wrap items-center gap-2 shadow-lg"
+          style={{ background: "var(--color-ocean, #0077b6)" }}
+        >
+          <span className="text-white text-sm font-medium mr-1">{selected.size} selected — Move to:</span>
+          {days.map(d => (
+            <button
+              key={d.id}
+              onClick={() => moveSelectedToDay(d.id)}
+              className="text-xs px-3 py-1.5 rounded-full font-medium transition-colors hover:opacity-80"
+              style={{ background: "rgba(255,255,255,0.2)", color: "white" }}
+            >{d.label}</button>
+          ))}
+          <button
+            onClick={() => moveSelectedToDay(null)}
+            className="text-xs px-3 py-1.5 rounded-full font-medium transition-colors hover:opacity-80"
+            style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
+          >Unassign</button>
+          <button
+            onClick={() => setSelected(new Set())}
+            className="ml-auto text-xs px-3 py-1.5 rounded-full font-medium"
+            style={{ background: "rgba(0,0,0,0.2)", color: "white" }}
+          >Cancel</button>
+        </div>
+      )}
+
       {saving && (
         <p className="text-center text-xs mb-4" style={{ color: "var(--color-ocean, #0077b6)", opacity: 0.6 }}>Saving…</p>
       )}
@@ -362,14 +430,35 @@ export function MemoriesGrid({
       {/* Day sections */}
       {grouped.filter(group => group.items.length > 0 || isAdmin).map(group => (
         <div key={group.id} className="mb-12">
-          <div className="mb-4 pb-3 border-b" style={{ borderColor: "rgba(0,119,182,0.15)" }}>
-            <h2 className="text-xl font-bold" style={{ color: "var(--color-ocean, #0077b6)" }}>
-              {group.label} · {formatDate(group.date)}
-            </h2>
-            {group.subtitle && (
-              <p className="text-sm mt-0.5" style={{ color: "var(--color-slate, #2c3e50)", opacity: 0.55 }}>
-                {group.subtitle}
-              </p>
+          <div className="mb-4 pb-3 border-b flex items-center justify-between" style={{ borderColor: "rgba(0,119,182,0.15)" }}>
+            <div>
+              <h2 className="text-xl font-bold" style={{ color: "var(--color-ocean, #0077b6)" }}>
+                {group.label} · {formatDate(group.date)}
+              </h2>
+              {group.subtitle && (
+                <p className="text-sm mt-0.5" style={{ color: "var(--color-slate, #2c3e50)", opacity: 0.55 }}>
+                  {group.subtitle}
+                </p>
+              )}
+            </div>
+            {/* Select all in this day */}
+            {isAdmin && group.items.length > 0 && (
+              <button
+                onClick={() => {
+                  const allInDay = group.items.map(b => b.pathname);
+                  const allSelected = allInDay.every(p => selected.has(p));
+                  setSelected(prev => {
+                    const next = new Set(prev);
+                    if (allSelected) allInDay.forEach(p => next.delete(p));
+                    else allInDay.forEach(p => next.add(p));
+                    return next;
+                  });
+                }}
+                className="text-xs px-2.5 py-1 rounded-full transition-colors"
+                style={{ background: "rgba(0,119,182,0.08)", color: "var(--color-ocean, #0077b6)" }}
+              >
+                {group.items.every(b => selected.has(b.pathname)) ? "Deselect all" : "Select all"}
+              </button>
             )}
           </div>
           {group.items.length === 0 && !isAdmin ? (
