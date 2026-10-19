@@ -473,13 +473,33 @@ export function MemoriesGrid({
       {/* Unassigned */}
       {(unassigned.length > 0) && (
         <div className="mb-10">
-          <div className="mb-4 pb-3 border-b" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
-            <h2 className="text-xl font-bold" style={{ color: "var(--color-slate, #2c3e50)", opacity: 0.4 }}>
-              Unassigned
-            </h2>
-            <p className="text-xs mt-0.5" style={{ color: "var(--color-slate, #2c3e50)", opacity: 0.35 }}>
-              Drag photos to a day above
-            </p>
+          <div className="mb-4 pb-3 border-b flex items-center justify-between" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
+            <div>
+              <h2 className="text-xl font-bold" style={{ color: "var(--color-slate, #2c3e50)", opacity: 0.4 }}>
+                Unassigned
+              </h2>
+              <p className="text-xs mt-0.5" style={{ color: "var(--color-slate, #2c3e50)", opacity: 0.35 }}>
+                Drag photos to a day above
+              </p>
+            </div>
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  const allInUnassigned = unassigned.map(b => b.pathname);
+                  const allSelected = allInUnassigned.every(p => selected.has(p));
+                  setSelected(prev => {
+                    const next = new Set(prev);
+                    if (allSelected) allInUnassigned.forEach(p => next.delete(p));
+                    else allInUnassigned.forEach(p => next.add(p));
+                    return next;
+                  });
+                }}
+                className="text-xs px-2.5 py-1 rounded-full transition-colors"
+                style={{ background: "rgba(0,119,182,0.08)", color: "var(--color-ocean, #0077b6)" }}
+              >
+                {unassigned.every(b => selected.has(b.pathname)) ? "Deselect all" : "Select all"}
+              </button>
+            )}
           </div>
           {renderGrid(unassigned, null)}
         </div>
