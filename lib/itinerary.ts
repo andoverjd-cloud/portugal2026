@@ -124,12 +124,6 @@ export const days: Day[] = [
         type: "activity",
       },
       {
-        time: "5:00 PM",
-        name: "Pickling Class",
-        description: "Hands-on pickling class at the resort — a fun dive into traditional Portuguese preservation techniques.",
-        type: "activity",
-      },
-      {
         time: "7:00 PM",
         name: "The Vale de Abraão Restaurant",
         description: "Dinner at the resort's intimate restaurant — relaxed and elegant.",
