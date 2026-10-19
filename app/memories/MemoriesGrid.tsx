@@ -67,7 +67,22 @@ function Lightbox({ url, caption, index, total, onClose, onPrev, onNext }: {
 function AdminLock({ isAdmin }: { isAdmin: boolean }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
-  if (isAdmin) return null;
+
+  if (isAdmin) {
+    return (
+      <div className="fixed bottom-4 right-4 z-50">
+        <button
+          onClick={() => {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("admin");
+            window.location.href = url.toString();
+          }}
+          className="w-9 h-9 rounded-full bg-white shadow-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+          title="Exit admin"
+        >🔓</button>
+      </div>
+    );
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
