@@ -345,7 +345,7 @@ export function MemoriesGrid({
       )}
 
       {/* Day sections */}
-      {grouped.map(group => (
+      {grouped.filter(group => group.items.length > 0 || isAdmin).map(group => (
         <div key={group.id} className="mb-12">
           <div className="mb-4 pb-3 border-b" style={{ borderColor: "rgba(0,119,182,0.15)" }}>
             <h2 className="text-xl font-bold" style={{ color: "var(--color-ocean, #0077b6)" }}>
