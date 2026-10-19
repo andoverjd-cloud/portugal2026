@@ -2,10 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 
-type BlobItem = { url: string; pathname: string };
+export type OrderItem = { pathname: string; day?: string; caption?: string };
+export type DayInfo = { id: string; label: string; date: string; subtitle?: string };
+type BlobItem = { url: string; pathname: string; day?: string; caption?: string };
 
-function Lightbox({ url, index, total, onClose, onPrev, onNext }: {
-  url: string; index: number; total: number;
+function Lightbox({ url, caption, index, total, onClose, onPrev, onNext }: {
+  url: string; caption?: string; index: number; total: number;
   onClose: () => void; onPrev: () => void; onNext: () => void;
 }) {
   useEffect(() => {
@@ -27,9 +29,9 @@ function Lightbox({ url, index, total, onClose, onPrev, onNext }: {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={url}
-        alt=""
+        alt={caption || ""}
         className="object-contain"
-        style={{ width: "auto", height: "auto", maxWidth: "85vw", maxHeight: "90vh", minWidth: "min(85vw, 600px)", minHeight: "min(70vh, 400px)" }}
+        style={{ width: "auto", height: "auto", maxWidth: "85vw", maxHeight: caption ? "82vh" : "90vh", minWidth: "min(85vw, 600px)", minHeight: "min(70vh, 400px)" }}
         onClick={(e) => e.stopPropagation()}
         draggable={false}
       />
@@ -37,30 +39,27 @@ function Lightbox({ url, index, total, onClose, onPrev, onNext }: {
         onClick={onClose}
         className="absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center text-white text-lg font-bold"
         style={{ background: "rgba(255,255,255,0.15)" }}
-      >
-        ✕
-      </button>
+      >✕</button>
       {index > 0 && (
         <button
           onClick={(e) => { e.stopPropagation(); onPrev(); }}
           className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center text-white text-xl"
           style={{ background: "rgba(255,255,255,0.15)" }}
-        >
-          ‹
-        </button>
+        >‹</button>
       )}
       {index < total - 1 && (
         <button
           onClick={(e) => { e.stopPropagation(); onNext(); }}
           className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center text-white text-xl"
           style={{ background: "rgba(255,255,255,0.15)" }}
-        >
-          ›
-        </button>
+        >›</button>
       )}
-      <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
-        {index + 1} / {total}
-      </p>
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-center">
+        {caption && (
+          <p className="text-sm mb-1 px-4" style={{ color: "rgba(255,255,255,0.85)" }}>{caption}</p>
+        )}
+        <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{index + 1} / {total}</p>
+      </div>
     </div>
   );
 }
@@ -68,7 +67,6 @@ function Lightbox({ url, index, total, onClose, onPrev, onNext }: {
 function AdminLock({ isAdmin }: { isAdmin: boolean }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
-
   if (isAdmin) return null;
 
   function submit(e: React.FormEvent) {
@@ -85,140 +83,304 @@ function AdminLock({ isAdmin }: { isAdmin: boolean }) {
       {open ? (
         <form onSubmit={submit} className="flex items-center gap-2 bg-white rounded-full shadow-lg px-3 py-2 border border-gray-200">
           <input
-            autoFocus
-            type="password"
-            value={value}
+            autoFocus type="password" value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="Admin secret"
             className="text-sm outline-none w-36 bg-transparent"
           />
-          <button type="submit" className="text-xs font-semibold" style={{ color: "var(--color-ocean, #0077b6)" }}>
-            Go
-          </button>
-          <button type="button" onClick={() => setOpen(false)} className="text-xs text-gray-400 hover:text-gray-600">
-            ✕
-          </button>
+          <button type="submit" className="text-xs font-semibold" style={{ color: "var(--color-ocean, #0077b6)" }}>Go</button>
+          <button type="button" onClick={() => setOpen(false)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
         </form>
       ) : (
         <button
           onClick={() => setOpen(true)}
           className="w-9 h-9 rounded-full bg-white shadow-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
           title="Admin"
-        >
-          🔒
-        </button>
+        >🔒</button>
       )}
     </div>
   );
+}
+
+function formatDate(dateStr: string) {
+  return dateStr.replace(/,\s*\d{4}$/, "");
 }
 
 export function MemoriesGrid({
   initialBlobs,
   isAdmin,
   adminSecret,
+  days,
   saveOrder,
   deletePhoto,
 }: {
   initialBlobs: BlobItem[];
   isAdmin: boolean;
   adminSecret: string;
-  saveOrder: (pathnames: string[]) => Promise<void>;
+  days: DayInfo[];
+  saveOrder: (items: OrderItem[]) => Promise<void>;
   deletePhoto: (url: string, pathname: string, secret: string) => Promise<void>;
 }) {
   const [blobs, setBlobs] = useState(initialBlobs);
   const [saving, setSaving] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const dragIndex = useRef<number | null>(null);
-  const dragOverIndex = useRef<number | null>(null);
+  const [editingCaption, setEditingCaption] = useState<string | null>(null);
+  const [captionDraft, setCaptionDraft] = useState("");
 
-  function onDragStart(i: number) {
-    dragIndex.current = i;
-  }
+  // Drag state
+  const dragSrc = useRef<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ day: string | null; before: string | null } | null>(null);
 
-  function onDragOver(e: React.DragEvent, i: number) {
-    e.preventDefault();
-    dragOverIndex.current = i;
-  }
-
-  async function onDrop(e: React.DragEvent) {
-    e.preventDefault();
-    const from = dragIndex.current;
-    const to = dragOverIndex.current;
-    if (from === null || to === null || from === to) return;
-
-    const next = [...blobs];
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
-    setBlobs(next);
-    dragIndex.current = null;
-    dragOverIndex.current = null;
-
+  async function persist(next: BlobItem[]) {
     setSaving(true);
     try {
-      await saveOrder(next.map((b) => b.pathname));
+      await saveOrder(next.map(b => ({
+        pathname: b.pathname,
+        ...(b.day ? { day: b.day } : {}),
+        ...(b.caption ? { caption: b.caption } : {}),
+      })));
     } finally {
       setSaving(false);
     }
   }
 
+  function handleDragStart(pathname: string) {
+    dragSrc.current = pathname;
+  }
+
+  function handleDragOverPhoto(e: React.DragEvent, pathname: string, day: string | undefined) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropTarget({ day: day ?? null, before: pathname });
+  }
+
+  function handleDragOverSection(e: React.DragEvent, dayId: string | null) {
+    e.preventDefault();
+    // Only set section-level target if not hovering a specific photo
+    setDropTarget(prev => (prev?.before ? prev : { day: dayId, before: null }));
+  }
+
+  async function handleDrop(e: React.DragEvent, targetDay: string | null) {
+    e.preventDefault();
+    e.stopPropagation();
+    const src = dragSrc.current;
+    if (!src) return;
+
+    const target = dropTarget;
+    dragSrc.current = null;
+    setDropTarget(null);
+
+    const srcItem = blobs.find(b => b.pathname === src);
+    if (!srcItem) return;
+
+    const updated = { ...srcItem, day: targetDay ?? undefined };
+    const without = blobs.filter(b => b.pathname !== src);
+
+    let next: BlobItem[];
+    if (target?.before) {
+      const idx = without.findIndex(b => b.pathname === target.before);
+      next = idx >= 0
+        ? [...without.slice(0, idx), updated, ...without.slice(idx)]
+        : [...without, updated];
+    } else {
+      // Append after the last item currently in the target day
+      const lastIdx = without.reduce<number>((last, b, i) =>
+        (b.day ?? null) === targetDay ? i : last, -1);
+      next = lastIdx >= 0
+        ? [...without.slice(0, lastIdx + 1), updated, ...without.slice(lastIdx + 1)]
+        : [...without, updated];
+    }
+
+    setBlobs(next);
+    await persist(next);
+  }
+
+  async function handleSaveCaption(pathname: string) {
+    const next = blobs.map(b =>
+      b.pathname === pathname ? { ...b, caption: captionDraft.trim() || undefined } : b
+    );
+    setBlobs(next);
+    setEditingCaption(null);
+    await persist(next);
+  }
+
   async function handleDelete(url: string, pathname: string) {
     if (!confirm("Delete this photo?")) return;
     await deletePhoto(url, pathname, adminSecret);
-    setBlobs((prev) => prev.filter((b) => b.url !== url));
+    setBlobs(prev => prev.filter(b => b.url !== url));
+  }
+
+  // Build day groups and unassigned
+  const validDayIds = new Set(days.map(d => d.id));
+  const grouped = days.map(day => ({
+    ...day,
+    items: blobs.filter(b => b.day === day.id),
+  }));
+  const unassigned = blobs.filter(b => !b.day || !validDayIds.has(b.day));
+
+  // Flat ordered list for lightbox (grouped days first, then unassigned)
+  const allBlobs = [...grouped.flatMap(g => g.items), ...unassigned];
+
+  function renderGrid(items: BlobItem[], dayId: string | null) {
+    const isDragTarget = dropTarget?.day === dayId && !dropTarget.before;
+    return (
+      <div
+        className="grid gap-3 min-h-[60px] rounded-xl transition-colors"
+        style={{
+          gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+          ...(isDragTarget && isAdmin ? { background: "rgba(0,119,182,0.06)", outline: "2px dashed rgba(0,119,182,0.3)", outlineOffset: "4px" } : {}),
+        }}
+        onDragOver={(e) => handleDragOverSection(e, dayId)}
+        onDrop={(e) => handleDrop(e, dayId)}
+      >
+        {items.map(blob => {
+          const flatIdx = allBlobs.findIndex(b => b.pathname === blob.pathname);
+          const isDropBefore = dropTarget?.before === blob.pathname;
+          const isDragging = dragSrc.current === blob.pathname;
+          return (
+            <div key={blob.pathname} className="relative flex flex-col">
+              {/* Drop-before indicator */}
+              {isDropBefore && isAdmin && (
+                <div
+                  className="absolute -left-1.5 top-0 bottom-0 w-1 rounded-full z-10"
+                  style={{ background: "var(--color-ocean, #0077b6)" }}
+                />
+              )}
+              <div
+                className="relative group"
+                draggable={isAdmin}
+                onDragStart={() => handleDragStart(blob.pathname)}
+                onDragOver={(e) => handleDragOverPhoto(e, blob.pathname, blob.day)}
+                style={isAdmin ? { cursor: "grab", opacity: isDragging ? 0.35 : 1, transition: "opacity 0.15s" } : undefined}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={blob.url}
+                  alt={blob.caption || ""}
+                  className="w-full rounded-lg shadow-sm object-cover aspect-square"
+                  style={{ cursor: "pointer" }}
+                  loading="lazy"
+                  draggable={false}
+                  onClick={() => !isDragging && setLightboxIndex(flatIdx)}
+                />
+                {isAdmin && (
+                  <>
+                    <button
+                      onClick={() => handleDelete(blob.url, blob.pathname)}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full text-white text-sm font-bold flex items-center justify-center shadow opacity-0 group-hover:opacity-80 hover:!opacity-100 transition-opacity"
+                      style={{ background: "rgba(180,30,30,0.85)" }}
+                      title="Delete"
+                    >✕</button>
+                    <button
+                      onClick={() => { setEditingCaption(blob.pathname); setCaptionDraft(blob.caption || ""); }}
+                      className="absolute top-2 left-2 w-7 h-7 rounded-full text-white text-xs flex items-center justify-center shadow opacity-0 group-hover:opacity-80 hover:!opacity-100 transition-opacity"
+                      style={{ background: "rgba(0,0,0,0.55)" }}
+                      title="Edit caption"
+                    >✏️</button>
+                  </>
+                )}
+              </div>
+              {/* Caption editing */}
+              {editingCaption === blob.pathname ? (
+                <div className="mt-1.5 px-0.5">
+                  <textarea
+                    autoFocus
+                    value={captionDraft}
+                    onChange={e => setCaptionDraft(e.target.value)}
+                    className="w-full text-xs rounded-lg p-2 border border-gray-300 resize-none outline-none"
+                    rows={2}
+                    placeholder="Caption…"
+                    onKeyDown={e => {
+                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSaveCaption(blob.pathname); }
+                      if (e.key === "Escape") setEditingCaption(null);
+                    }}
+                  />
+                  <div className="flex gap-1.5 mt-1">
+                    <button
+                      onClick={() => handleSaveCaption(blob.pathname)}
+                      className="text-xs px-2.5 py-1 rounded-full font-medium"
+                      style={{ background: "var(--color-ocean, #0077b6)", color: "white" }}
+                    >Save</button>
+                    <button onClick={() => setEditingCaption(null)} className="text-xs px-2.5 py-1 rounded-full text-gray-500 bg-gray-100">Cancel</button>
+                  </div>
+                </div>
+              ) : blob.caption ? (
+                <p
+                  className="text-xs mt-1.5 text-center px-1 leading-snug"
+                  style={{ color: "var(--color-slate, #2c3e50)", opacity: 0.65 }}
+                >{blob.caption}</p>
+              ) : null}
+            </div>
+          );
+        })}
+        {/* Empty drop zone hint */}
+        {items.length === 0 && isAdmin && (
+          <div
+            className="col-span-full rounded-xl border-2 border-dashed py-8 text-center text-xs"
+            style={{ borderColor: isDragTarget ? "var(--color-ocean, #0077b6)" : "rgba(0,0,0,0.1)", color: isDragTarget ? "var(--color-ocean, #0077b6)" : "rgba(0,0,0,0.3)" }}
+          >
+            {isDragTarget ? "Drop here" : "No photos yet — drag to add"}
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
     <>
       {lightboxIndex !== null && (
         <Lightbox
-          url={blobs[lightboxIndex].url}
+          url={allBlobs[lightboxIndex].url}
+          caption={allBlobs[lightboxIndex].caption}
           index={lightboxIndex}
-          total={blobs.length}
+          total={allBlobs.length}
           onClose={() => setLightboxIndex(null)}
-          onPrev={() => setLightboxIndex((i) => Math.max(0, (i ?? 0) - 1))}
-          onNext={() => setLightboxIndex((i) => Math.min(blobs.length - 1, (i ?? 0) + 1))}
+          onPrev={() => setLightboxIndex(i => Math.max(0, (i ?? 0) - 1))}
+          onNext={() => setLightboxIndex(i => Math.min(allBlobs.length - 1, (i ?? 0) + 1))}
         />
       )}
       <AdminLock isAdmin={isAdmin} />
       {saving && (
-        <p className="text-center text-xs mb-4" style={{ color: "var(--color-ocean, #0077b6)", opacity: 0.6 }}>
-          Saving order…
-        </p>
+        <p className="text-center text-xs mb-4" style={{ color: "var(--color-ocean, #0077b6)", opacity: 0.6 }}>Saving…</p>
       )}
-      <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))" }}>
-        {blobs.map((blob, i) => (
-          <div
-            key={blob.url}
-            className="relative group"
-            draggable={isAdmin}
-            onDragStart={() => onDragStart(i)}
-            onDragOver={(e) => onDragOver(e, i)}
-            onDrop={onDrop}
-            style={isAdmin ? { cursor: "grab" } : undefined}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={blob.url}
-              alt=""
-              className="w-full rounded-lg shadow-sm object-cover aspect-square"
-              style={{ cursor: "pointer" }}
-              loading="lazy"
-              draggable={false}
-              onClick={() => setLightboxIndex(i)}
-            />
-            {isAdmin && (
-              <button
-                onClick={() => handleDelete(blob.url, blob.pathname)}
-                className="absolute top-2 right-2 w-7 h-7 rounded-full text-white text-sm font-bold flex items-center justify-center shadow opacity-0 group-hover:opacity-80 hover:!opacity-100 transition-opacity"
-                style={{ background: "rgba(180,30,30,0.85)" }}
-                title="Delete"
-              >
-                ✕
-              </button>
+
+      {/* Day sections */}
+      {grouped.map(group => (
+        <div key={group.id} className="mb-12">
+          <div className="mb-4 pb-3 border-b" style={{ borderColor: "rgba(0,119,182,0.15)" }}>
+            <h2 className="text-xl font-bold" style={{ color: "var(--color-ocean, #0077b6)" }}>
+              {group.label} · {formatDate(group.date)}
+            </h2>
+            {group.subtitle && (
+              <p className="text-sm mt-0.5" style={{ color: "var(--color-slate, #2c3e50)", opacity: 0.55 }}>
+                {group.subtitle}
+              </p>
             )}
           </div>
-        ))}
-      </div>
+          {group.items.length === 0 && !isAdmin ? (
+            <p className="text-sm italic py-4" style={{ color: "var(--color-slate, #2c3e50)", opacity: 0.35 }}>
+              No photos yet
+            </p>
+          ) : (
+            renderGrid(group.items, group.id)
+          )}
+        </div>
+      ))}
+
+      {/* Unassigned */}
+      {(unassigned.length > 0 || isAdmin) && (
+        <div className="mb-10">
+          <div className="mb-4 pb-3 border-b" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
+            <h2 className="text-xl font-bold" style={{ color: "var(--color-slate, #2c3e50)", opacity: 0.4 }}>
+              Unassigned
+            </h2>
+            <p className="text-xs mt-0.5" style={{ color: "var(--color-slate, #2c3e50)", opacity: 0.35 }}>
+              Drag photos to a day above
+            </p>
+          </div>
+          {renderGrid(unassigned, null)}
+        </div>
+      )}
     </>
   );
 }

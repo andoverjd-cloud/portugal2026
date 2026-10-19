@@ -1,14 +1,16 @@
 import { list, put } from "@vercel/blob";
 import { MemoriesGrid } from "./MemoriesGrid";
+import type { OrderItem, DayInfo } from "./MemoriesGrid";
+import { days as itineraryDays } from "../../lib/itinerary";
 
 const TRIP_ID = "portugal2026";
 const ORDER_KEY = `${TRIP_ID}/_order.json`;
 
 export const dynamic = "force-dynamic";
 
-async function saveOrder(pathnames: string[]) {
+async function saveOrder(items: OrderItem[]) {
   "use server";
-  await put(ORDER_KEY, JSON.stringify(pathnames), {
+  await put(ORDER_KEY, JSON.stringify(items), {
     access: "public",
     token: process.env.BLOB_READ_WRITE_TOKEN,
     addRandomSuffix: false,
@@ -28,8 +30,12 @@ async function deletePhoto(url: string, pathname: string, secret: string) {
     const orderBlob = result.blobs.find((b) => b.pathname === ORDER_KEY);
     if (orderBlob) {
       const res = await fetch(orderBlob.url);
-      const order: string[] = await res.json();
-      await putBlob(ORDER_KEY, JSON.stringify(order.filter((p) => p !== pathname)), {
+      const raw = await res.json();
+      // Handle both old string[] and new OrderItem[] formats
+      const items: OrderItem[] = Array.isArray(raw) && raw.length > 0 && typeof raw[0] === "string"
+        ? (raw as string[]).map((p) => ({ pathname: p }))
+        : (raw as OrderItem[]);
+      await putBlob(ORDER_KEY, JSON.stringify(items.filter((item) => item.pathname !== pathname)), {
         access: "public", token, addRandomSuffix: false, allowOverwrite: true,
       });
     }
@@ -49,52 +55,77 @@ export default async function MemoriesPage({
   );
 
   const token = process.env.BLOB_READ_WRITE_TOKEN;
-  let blobs: { url: string; pathname: string }[] = [];
+  let blobs: { url: string; pathname: string; day?: string; caption?: string }[] = [];
   let listError: string | null = null;
-  let savedOrder: string[] | null = null;
 
   try {
     const result = await list({ prefix: `${TRIP_ID}/`, token });
     const photos = result.blobs.filter((b) => !b.pathname.endsWith("_order.json"));
 
+    // Parse order file — handles both old string[] and new OrderItem[] formats
     const orderBlob = result.blobs.find((b) => b.pathname === ORDER_KEY);
+    let orderItems: OrderItem[] = [];
     if (orderBlob) {
       try {
         const res = await fetch(orderBlob.url);
-        savedOrder = await res.json();
-      } catch {
-        // fall back to pathname sort
-      }
+        const raw = await res.json();
+        if (Array.isArray(raw) && raw.length > 0 && typeof raw[0] === "string") {
+          orderItems = (raw as string[]).map((p) => ({ pathname: p }));
+        } else {
+          orderItems = raw as OrderItem[];
+        }
+      } catch { /* fall through to pathname sort */ }
     }
 
-    if (savedOrder) {
-      const map = new Map(photos.map((b) => [b.pathname, b]));
-      const ordered = savedOrder.flatMap((p) => (map.has(p) ? [map.get(p)!] : []));
-      const newPhotos = photos.filter((b) => !savedOrder!.includes(b.pathname));
+    if (orderItems.length > 0) {
+      const metaMap = new Map(orderItems.map((item) => [item.pathname, item]));
+      const urlMap = new Map(photos.map((b) => [b.pathname, b.url]));
+
+      // Ordered photos (in saved order)
+      const ordered = orderItems
+        .filter((item) => urlMap.has(item.pathname))
+        .map((item) => ({ url: urlMap.get(item.pathname)!, ...item }));
+
+      // New photos not in saved order → append without day
+      const orderedPathnames = new Set(orderItems.map((i) => i.pathname));
+      const newPhotos = photos
+        .filter((b) => !orderedPathnames.has(b.pathname))
+        .map((b) => ({ url: b.url, pathname: b.pathname }));
+
       blobs = [...ordered, ...newPhotos];
     } else {
-      blobs = photos.sort((a, b) => a.pathname.localeCompare(b.pathname));
+      blobs = photos
+        .sort((a, b) => a.pathname.localeCompare(b.pathname))
+        .map((b) => ({ url: b.url, pathname: b.pathname }));
     }
   } catch (e) {
     listError = e instanceof Error ? e.message : String(e);
     console.error("Blob list error:", listError);
   }
 
+  // Build DayInfo list from itinerary
+  const days: DayInfo[] = itineraryDays.map((d) => ({
+    id: d.id,
+    label: d.label,
+    date: d.date,
+    subtitle: d.subtitle,
+  }));
+
   return (
     <main className="min-h-screen" style={{ background: "var(--color-sand, #f5f0e8)" }}>
       <header
         className="py-12 px-4 text-center relative"
-        style={{ background: "var(--color-azure, #1a3a5c)" }}
+        style={{ background: "var(--color-ocean, #0077b6)" }}
       >
-        <a href="/" className="absolute left-4 top-4 inline-flex items-center gap-1 text-xs hover:opacity-80 transition-opacity" style={{ color: "rgba(245,240,232,0.6)" }}>
+        <a href="/" className="absolute left-4 top-4 inline-flex items-center gap-1 text-xs hover:opacity-80 transition-opacity" style={{ color: "rgba(255,255,255,0.6)" }}>
           ← Back
         </a>
-        <p className="text-sm uppercase tracking-[0.3em] mb-3" style={{ color: "rgba(196,98,45,0.9)" }}>
+        <p className="text-sm uppercase tracking-[0.3em] mb-3" style={{ color: "rgba(224,212,180,0.85)" }}>
           Portugal · October 2026
         </p>
         <h1
           className="text-5xl font-bold mb-3"
-          style={{ fontFamily: "var(--font-serif, Georgia)", color: "#f5f0e8" }}
+          style={{ fontFamily: "var(--font-serif, Georgia)", color: "#ffffff" }}
         >
           Memories
         </h1>
@@ -115,6 +146,7 @@ export default async function MemoriesPage({
             initialBlobs={blobs}
             isAdmin={isAdmin}
             adminSecret={params.admin ?? ""}
+            days={days}
             saveOrder={saveOrder}
             deletePhoto={deletePhoto}
           />
@@ -123,9 +155,9 @@ export default async function MemoriesPage({
 
       <footer
         className="py-8 px-4 text-center text-sm"
-        style={{ background: "var(--color-azure-dark, #0e2340)", color: "rgba(245,240,232,0.4)" }}
+        style={{ background: "var(--color-ocean-dark, #023e8a)", color: "rgba(255,255,255,0.4)" }}
       >
-        <p>Feliz aniversário 🇵🇹 · John · Lea · October 2026</p>
+        <p>Portugal 2026 🇵🇹 · John · Lea · October 2026</p>
       </footer>
     </main>
   );
