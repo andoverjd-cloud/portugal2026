@@ -310,11 +310,10 @@ export function MemoriesGrid({
                 {isAdmin && (
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleSelect(blob.pathname); }}
-                    className="absolute bottom-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow transition-opacity"
+                    className={`absolute bottom-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow transition-opacity ${isSelected || isSelecting ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                     style={{
                       background: isSelected ? "var(--color-ocean, #0077b6)" : "rgba(255,255,255,0.85)",
                       color: isSelected ? "white" : "rgba(0,0,0,0.4)",
-                      opacity: isSelecting ? 1 : 0,
                     }}
                     title={isSelected ? "Deselect" : "Select"}
                   >{isSelected ? "✓" : "○"}</button>
