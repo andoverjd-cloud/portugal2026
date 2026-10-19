@@ -15,24 +15,18 @@ function getDb() {
 async function saveOrder(items: OrderItem[]) {
   "use server";
   const sql = getDb();
-  const secret = process.env.MEMORIES_ADMIN_SECRET!;
-  const base = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "https://portugal2026.thedrakes.info";
-  await fetch(`${base}/api/memories/metadata`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      secret,
-      trip_id: TRIP_ID,
-      items: items.map((item, idx) => ({
-        pathname: item.pathname,
-        day: item.day ?? null,
-        caption: item.caption ?? null,
-        sort_order: idx,
-      })),
-    }),
-  });
+  for (let idx = 0; idx < items.length; idx++) {
+    const item = items[idx];
+    await sql`
+      INSERT INTO photo_metadata (trip_id, pathname, day, caption, sort_order, updated_at)
+      VALUES (${TRIP_ID}, ${item.pathname}, ${item.day ?? null}, ${item.caption ?? null}, ${idx}, NOW())
+      ON CONFLICT (trip_id, pathname) DO UPDATE SET
+        day = EXCLUDED.day,
+        caption = COALESCE(EXCLUDED.caption, photo_metadata.caption),
+        sort_order = EXCLUDED.sort_order,
+        updated_at = NOW()
+    `;
+  }
 }
 
 async function deletePhoto(url: string, pathname: string, secret: string) {
