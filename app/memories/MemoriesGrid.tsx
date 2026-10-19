@@ -368,7 +368,7 @@ export function MemoriesGrid({
       ))}
 
       {/* Unassigned */}
-      {(unassigned.length > 0 || isAdmin) && (
+      {(unassigned.length > 0) && (
         <div className="mb-10">
           <div className="mb-4 pb-3 border-b" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
             <h2 className="text-xl font-bold" style={{ color: "var(--color-slate, #2c3e50)", opacity: 0.4 }}>
