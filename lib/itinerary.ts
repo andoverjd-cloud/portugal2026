@@ -135,7 +135,7 @@ export const days: Day[] = [
     id: "tuesday",
     date: "October 20, 2026",
     label: "Tuesday",
-    subtitle: "Douro Valley — Hike, Port & Farewell Dinner",
+    subtitle: "Douro Valley — Kitchen Table, Wine & Cheeses",
     mapCenter: { lat: 41.1, lng: -7.9 },
     mapZoom: 10,
     regions: [
