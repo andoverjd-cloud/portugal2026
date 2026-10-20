@@ -31,9 +31,20 @@ export async function POST(req: NextRequest) {
   }
 
   for (const item of items) {
+    // When no sort_order provided, place at end of that day (max + 1)
+    let sortOrder = item.sort_order ?? null;
+    if (sortOrder === null) {
+      const dayVal = item.day ?? null;
+      const rows = await sql`
+        SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order
+        FROM photo_metadata
+        WHERE trip_id = ${trip_id} AND day IS NOT DISTINCT FROM ${dayVal}
+      `;
+      sortOrder = rows[0]?.next_order ?? 0;
+    }
     await sql`
       INSERT INTO photo_metadata (trip_id, pathname, day, caption, sort_order, updated_at)
-      VALUES (${trip_id}, ${item.pathname}, ${item.day ?? null}, ${item.caption ?? null}, ${item.sort_order ?? null}, NOW())
+      VALUES (${trip_id}, ${item.pathname}, ${item.day ?? null}, ${item.caption ?? null}, ${sortOrder}, NOW())
       ON CONFLICT (trip_id, pathname) DO UPDATE SET
         day = COALESCE(EXCLUDED.day, photo_metadata.day),
         caption = COALESCE(EXCLUDED.caption, photo_metadata.caption),
