@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 
-export type OrderItem = { pathname: string; day?: string; caption?: string };
+export type OrderItem = { pathname: string; day?: string; caption?: string | null };
 export type DayInfo = { id: string; label: string; date: string; subtitle?: string };
 type BlobItem = { url: string; pathname: string; day?: string; caption?: string };
 
@@ -141,7 +141,7 @@ export function MemoriesGrid({
 }) {
   const [blobs, setBlobs] = useState(initialBlobs);
   const [saving, setSaving] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [lightboxPathname, setLightboxPathname] = useState<string | null>(null);
   const [editingCaption, setEditingCaption] = useState<string | null>(null);
   const [captionDraft, setCaptionDraft] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -157,8 +157,8 @@ export function MemoriesGrid({
     try {
       await saveOrder(next.map(b => ({
         pathname: b.pathname,
-        ...(b.day ? { day: b.day } : {}),
-        ...(b.caption ? { caption: b.caption } : {}),
+        day: b.day ?? undefined,
+        caption: b.caption ?? null,
       })));
     } finally {
       setSaving(false);
@@ -271,7 +271,6 @@ export function MemoriesGrid({
         onDrop={(e) => handleDrop(e, dayId)}
       >
         {items.map(blob => {
-          const flatIdx = allBlobs.findIndex(b => b.pathname === blob.pathname);
           const isDropBefore = dropTarget?.before === blob.pathname;
           const isDragging = dragSrc.current === blob.pathname;
           const isSelected = selected.has(blob.pathname);
@@ -303,7 +302,7 @@ export function MemoriesGrid({
                   draggable={false}
                   onClick={() => {
                     if (isSelecting && isAdmin) { toggleSelect(blob.pathname); return; }
-                    if (!isDragging) setLightboxIndex(flatIdx);
+                    if (!isDragging) setLightboxPathname(blob.pathname);
                   }}
                 />
                 {/* Selection checkbox in admin mode */}
@@ -379,20 +378,23 @@ export function MemoriesGrid({
     );
   }
 
+  const lightboxIndex = lightboxPathname !== null ? allBlobs.findIndex(b => b.pathname === lightboxPathname) : -1;
+  const lightboxBlob = lightboxIndex >= 0 ? allBlobs[lightboxIndex] : null;
+
   return (
     <>
-      {lightboxIndex !== null && (
+      {lightboxBlob && (
         <Lightbox
-          url={allBlobs[lightboxIndex].url}
-          caption={allBlobs[lightboxIndex].caption}
+          url={lightboxBlob.url}
+          caption={lightboxBlob.caption}
           index={lightboxIndex}
           total={allBlobs.length}
-          onClose={() => setLightboxIndex(null)}
-          onPrev={() => setLightboxIndex(i => Math.max(0, (i ?? 0) - 1))}
-          onNext={() => setLightboxIndex(i => Math.min(allBlobs.length - 1, (i ?? 0) + 1))}
+          onClose={() => setLightboxPathname(null)}
+          onPrev={() => { const i = Math.max(0, lightboxIndex - 1); setLightboxPathname(allBlobs[i].pathname); }}
+          onNext={() => { const i = Math.min(allBlobs.length - 1, lightboxIndex + 1); setLightboxPathname(allBlobs[i].pathname); }}
         />
       )}
-      <AdminLock isAdmin={isAdmin} hidden={lightboxIndex !== null} />
+      <AdminLock isAdmin={isAdmin} hidden={lightboxPathname !== null} />
 
       {/* Multi-select action bar */}
       {isSelecting && isAdmin && (

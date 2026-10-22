@@ -46,9 +46,9 @@ export async function POST(req: NextRequest) {
       INSERT INTO photo_metadata (trip_id, pathname, day, caption, sort_order, updated_at)
       VALUES (${trip_id}, ${item.pathname}, ${item.day ?? null}, ${item.caption ?? null}, ${sortOrder}, NOW())
       ON CONFLICT (trip_id, pathname) DO UPDATE SET
-        day = COALESCE(EXCLUDED.day, photo_metadata.day),
-        caption = COALESCE(EXCLUDED.caption, photo_metadata.caption),
-        sort_order = COALESCE(EXCLUDED.sort_order, photo_metadata.sort_order),
+        day = EXCLUDED.day,
+        caption = EXCLUDED.caption,
+        sort_order = EXCLUDED.sort_order,
         updated_at = NOW()
     `;
   }

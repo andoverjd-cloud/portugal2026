@@ -22,7 +22,7 @@ async function saveOrder(items: OrderItem[]) {
       VALUES (${TRIP_ID}, ${item.pathname}, ${item.day ?? null}, ${item.caption ?? null}, ${idx}, NOW())
       ON CONFLICT (trip_id, pathname) DO UPDATE SET
         day = EXCLUDED.day,
-        caption = COALESCE(EXCLUDED.caption, photo_metadata.caption),
+        caption = EXCLUDED.caption,
         sort_order = EXCLUDED.sort_order,
         updated_at = NOW()
     `;
@@ -134,7 +134,7 @@ export default async function MemoriesPage({
         {listError && (
           <p className="text-center text-red-500 text-xs py-4">Error: {listError}</p>
         )}
-        {blobs.length === 0 ? (
+        {!listError && blobs.length === 0 ? (
           <div className="text-center py-20" style={{ color: "var(--color-slate, #2c3e50)", opacity: 0.5 }}>
             <p className="text-5xl mb-4">📸</p>
             <p className="text-lg font-medium">No memories yet</p>
