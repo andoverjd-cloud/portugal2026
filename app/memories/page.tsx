@@ -59,7 +59,7 @@ export default async function MemoriesPage({
   try {
     // Get all photos from Blob
     const result = await list({ prefix: `${TRIP_ID}/`, token });
-    const photos = result.blobs.filter((b) => b.pathname.endsWith(".jpg") || b.pathname.endsWith(".jpeg") || b.pathname.endsWith(".png") || b.pathname.endsWith(".webp"));
+    const photos = result.blobs.filter((b) => b.pathname.endsWith(".jpg") || b.pathname.endsWith(".jpeg") || b.pathname.endsWith(".png") || b.pathname.endsWith(".webp") || b.pathname.endsWith(".heic"));
 
     // Get metadata from Postgres (source of truth)
     const sql = getDb();
