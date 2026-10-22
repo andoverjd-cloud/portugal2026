@@ -12,6 +12,12 @@ function getDb() {
   return neon(process.env.DATABASE_URL!);
 }
 
+async function getTripArchived(): Promise<boolean> {
+  const sql = getDb();
+  const rows = await sql`SELECT archived FROM trips WHERE trip_id = ${TRIP_ID}`;
+  return rows[0]?.archived ?? false;
+}
+
 async function saveOrder(items: OrderItem[]) {
   "use server";
   const sql = getDb();
@@ -51,6 +57,8 @@ export default async function MemoriesPage({
     process.env.MEMORIES_ADMIN_SECRET &&
     params.admin === process.env.MEMORIES_ADMIN_SECRET
   );
+
+  const [isArchived] = await Promise.all([getTripArchived()]).catch(() => [false]);
 
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   let blobs: { url: string; pathname: string; day?: string; caption?: string }[] = [];
@@ -144,6 +152,7 @@ export default async function MemoriesPage({
           <MemoriesGrid
             initialBlobs={blobs}
             isAdmin={isAdmin}
+            isArchived={isArchived}
             adminSecret={params.admin ?? ""}
             days={days}
             saveOrder={saveOrder}

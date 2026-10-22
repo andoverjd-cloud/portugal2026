@@ -127,6 +127,7 @@ function formatDate(dateStr: string) {
 export function MemoriesGrid({
   initialBlobs,
   isAdmin,
+  isArchived: initialArchived,
   adminSecret,
   days,
   saveOrder,
@@ -134,11 +135,14 @@ export function MemoriesGrid({
 }: {
   initialBlobs: BlobItem[];
   isAdmin: boolean;
+  isArchived: boolean;
   adminSecret: string;
   days: DayInfo[];
   saveOrder: (items: OrderItem[]) => Promise<void>;
   deletePhoto: (url: string, pathname: string, secret: string) => Promise<void>;
 }) {
+  const [isArchived, setIsArchived] = useState(initialArchived);
+  const [archiving, setArchiving] = useState(false);
   const [blobs, setBlobs] = useState(initialBlobs);
   const [saving, setSaving] = useState(false);
   const [lightboxPathname, setLightboxPathname] = useState<string | null>(null);
@@ -150,7 +154,25 @@ export function MemoriesGrid({
   const dragSrc = useRef<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ day: string | null; before: string | null } | null>(null);
 
+  const canEdit = isAdmin && !isArchived;
   const isSelecting = selected.size > 0;
+
+  async function toggleArchive() {
+    if (!confirm(isArchived ? "Unarchive this trip? Uploads and edits will be re-enabled." : "Archive this trip? A backup will be saved and uploads/edits will be locked.")) return;
+    setArchiving(true);
+    try {
+      const res = await fetch("/api/memories/archive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ secret: adminSecret, trip_id: "portugal2026", archived: !isArchived }),
+      });
+      const data = await res.json();
+      if (data.ok) setIsArchived(!isArchived);
+      else alert("Archive failed: " + JSON.stringify(data));
+    } finally {
+      setArchiving(false);
+    }
+  }
 
   async function persist(next: BlobItem[]) {
     setSaving(true);
@@ -265,7 +287,7 @@ export function MemoriesGrid({
         className="grid gap-3 min-h-[60px] rounded-xl transition-colors"
         style={{
           gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-          ...(isDragTarget && isAdmin ? { background: "rgba(0,119,182,0.06)", outline: "2px dashed rgba(0,119,182,0.3)", outlineOffset: "4px" } : {}),
+          ...(isDragTarget && canEdit ? { background: "rgba(0,119,182,0.06)", outline: "2px dashed rgba(0,119,182,0.3)", outlineOffset: "4px" } : {}),
         }}
         onDragOver={(e) => handleDragOverSection(e, dayId)}
         onDrop={(e) => handleDrop(e, dayId)}
@@ -276,7 +298,7 @@ export function MemoriesGrid({
           const isSelected = selected.has(blob.pathname);
           return (
             <div key={blob.pathname} className="relative flex flex-col">
-              {isDropBefore && isAdmin && (
+              {isDropBefore && canEdit && (
                 <div
                   className="absolute -left-1.5 top-0 bottom-0 w-1 rounded-full z-10"
                   style={{ background: "var(--color-ocean, #0077b6)" }}
@@ -284,10 +306,10 @@ export function MemoriesGrid({
               )}
               <div
                 className="relative group"
-                draggable={isAdmin && !isSelecting}
+                draggable={canEdit && !isSelecting}
                 onDragStart={() => handleDragStart(blob.pathname)}
                 onDragOver={(e) => handleDragOverPhoto(e, blob.pathname, blob.day)}
-                style={isAdmin && !isSelecting ? { cursor: "grab", opacity: isDragging ? 0.35 : 1, transition: "opacity 0.15s" } : undefined}
+                style={canEdit && !isSelecting ? { cursor: "grab", opacity: isDragging ? 0.35 : 1, transition: "opacity 0.15s" } : undefined}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -301,12 +323,12 @@ export function MemoriesGrid({
                   loading="lazy"
                   draggable={false}
                   onClick={() => {
-                    if (isSelecting && isAdmin) { toggleSelect(blob.pathname); return; }
+                    if (isSelecting && canEdit) { toggleSelect(blob.pathname); return; }
                     if (!isDragging) setLightboxPathname(blob.pathname);
                   }}
                 />
                 {/* Selection checkbox in admin mode */}
-                {isAdmin && (
+                {canEdit && (
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleSelect(blob.pathname); }}
                     className={`absolute bottom-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow transition-opacity ${isSelected || isSelecting ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
@@ -317,7 +339,7 @@ export function MemoriesGrid({
                     title={isSelected ? "Deselect" : "Select"}
                   >{isSelected ? "✓" : "○"}</button>
                 )}
-                {isAdmin && (
+                {canEdit && (
                   <>
                     <button
                       onClick={() => handleDelete(blob.url, blob.pathname)}
@@ -366,7 +388,7 @@ export function MemoriesGrid({
             </div>
           );
         })}
-        {items.length === 0 && isAdmin && (
+        {items.length === 0 && canEdit && (
           <div
             className="col-span-full rounded-xl border-2 border-dashed py-8 text-center text-xs"
             style={{ borderColor: isDragTarget ? "var(--color-ocean, #0077b6)" : "rgba(0,0,0,0.1)", color: isDragTarget ? "var(--color-ocean, #0077b6)" : "rgba(0,0,0,0.3)" }}
@@ -395,9 +417,25 @@ export function MemoriesGrid({
         />
       )}
       <AdminLock isAdmin={isAdmin} hidden={lightboxPathname !== null} />
+      {isAdmin && !lightboxPathname && (
+        <div className="fixed bottom-4 left-4 z-50">
+          <button
+            onClick={toggleArchive}
+            disabled={archiving}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium shadow-lg border transition-colors"
+            style={isArchived
+              ? { background: "#fff3cd", borderColor: "#e6a817", color: "#7d5200" }
+              : { background: "white", borderColor: "#e5e7eb", color: "#6b7280" }
+            }
+            title={isArchived ? "Unarchive trip" : "Archive trip"}
+          >
+            {archiving ? "…" : isArchived ? "🔒 Archived" : "📦 Archive"}
+          </button>
+        </div>
+      )}
 
       {/* Multi-select action bar */}
-      {isSelecting && isAdmin && (
+      {isSelecting && canEdit && (
         <div
           className="sticky top-0 z-40 mb-6 rounded-2xl px-4 py-3 flex flex-wrap items-center gap-2 shadow-lg"
           style={{ background: "var(--color-ocean, #0077b6)" }}
@@ -429,7 +467,7 @@ export function MemoriesGrid({
       )}
 
       {/* Day sections */}
-      {grouped.filter(group => group.items.length > 0 || isAdmin).map(group => (
+      {grouped.filter(group => group.items.length > 0 || canEdit).map(group => (
         <div key={group.id} className="mb-12">
           <div className="mb-4 pb-3 border-b flex items-center justify-between" style={{ borderColor: "rgba(0,119,182,0.15)" }}>
             <div>
@@ -443,7 +481,7 @@ export function MemoriesGrid({
               )}
             </div>
             {/* Select all in this day */}
-            {isAdmin && group.items.length > 0 && (
+            {canEdit && group.items.length > 0 && (
               <button
                 onClick={() => {
                   const allInDay = group.items.map(b => b.pathname);
@@ -462,7 +500,7 @@ export function MemoriesGrid({
               </button>
             )}
           </div>
-          {group.items.length === 0 && !isAdmin ? (
+          {group.items.length === 0 && !canEdit ? (
             <p className="text-sm italic py-4" style={{ color: "var(--color-slate, #2c3e50)", opacity: 0.35 }}>
               No photos yet
             </p>
@@ -484,7 +522,7 @@ export function MemoriesGrid({
                 Drag photos to a day above
               </p>
             </div>
-            {isAdmin && (
+            {canEdit && (
               <button
                 onClick={() => {
                   const allInUnassigned = unassigned.map(b => b.pathname);
