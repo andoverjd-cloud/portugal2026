@@ -223,14 +223,19 @@ export const days: Day[] = [
     id: "thursday",
     date: "October 22, 2026",
     label: "Thursday",
-    subtitle: "Alentejo — Olive Oil, Wine & Off-Property Dinner",
+    subtitle: "Alentejo — Olive Oil, Bike Ride & Dinner at Barrocal",
     mapCenter: { lat: 38.55, lng: -7.35 },
     mapZoom: 10,
     regions: [
-      { name: "São Lourenço do Barrocal", description: "Estate tastings — olive oil and vertical wine", color: "#1a3a5c" },
-      { name: "Reguengos de Monsaraz", description: "Nearby town — dinner at SAHIDA restaurant", color: "#c4622d" },
+      { name: "São Lourenço do Barrocal", description: "Estate activities — bike ride, olive oil tasting, dinner on property", color: "#1a3a5c" },
     ],
     stops: [
+      {
+        time: "9:00 AM",
+        name: "Bike Ride Around the Property",
+        description: "Morning bike ride exploring the 780-hectare estate — vineyards, cork oaks, and Alentejo landscape.",
+        type: "activity",
+      },
       {
         time: "11:30 AM",
         name: "Olive Oil Tasting",
@@ -239,23 +244,20 @@ export const days: Day[] = [
       },
       {
         time: "4:00 PM",
-        name: "Vertical Wine Tasting",
-        description: "Vertical tasting of Barrocal wines across multiple vintages.",
+        name: "Relax by the Pool",
+        description: "Afternoon at leisure by the pool.",
         type: "activity",
       },
       {
         time: "6:30 PM",
-        name: "Drive to Dinner",
-        description: "Short drive to Reguengos de Monsaraz.",
-        type: "travel",
+        name: "Cocktails by the Fire",
+        description: "Pre-dinner cocktails by the fire at the estate.",
+        type: "activity",
       },
       {
         time: "7:00 PM",
-        name: "SAHIDA",
-        description: "Contemporary Alentejo cuisine in a beautifully restored space in Reguengos de Monsaraz.",
-        address: "R. José Fernandes Caeiro 5, 7200-175 Reguengos de Monsaraz, Portugal",
-        lat: 38.4203,
-        lng: -7.5381,
+        name: "Dinner at Barrocal",
+        description: "Dinner at the main restaurant — seasonal Alentejo cuisine anchored by the estate's own produce, wine, and olive oil.",
         type: "meal",
       },
     ],
@@ -272,6 +274,12 @@ export const days: Day[] = [
       { name: "Herdade da Malhadinha Nova", description: "Southern Alentejo — acclaimed wines near Beja", color: "#1a3a5c" },
     ],
     stops: [
+      {
+        time: "9:00 AM",
+        name: "Bike Ride Around the Property",
+        description: "Morning bike ride exploring the 780-hectare estate — vineyards, cork oaks, and Alentejo landscape.",
+        type: "activity",
+      },
       {
         time: "Morning",
         name: "Relax at Barrocal",
