@@ -287,13 +287,13 @@ export const days: Day[] = [
         type: "activity",
       },
       {
-        time: "2:00 PM",
+        time: "11:00 AM",
         name: "Drive to Herdade da Malhadinha Nova",
         description: "~1.5 hour drive south through the lower Alentejo plains.",
         type: "travel",
       },
       {
-        time: "3:30 PM",
+        time: "12:30 PM",
         name: "Herdade da Malhadinha Nova",
         description: "Arrive at this family-run wine estate near Beja — elegant rooms, acclaimed wines, and one of the best restaurants in the Alentejo.",
         address: "Herdade da Malhadinha Nova, 7800-601 Albernoa, Portugal",
