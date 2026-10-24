@@ -372,8 +372,8 @@ export const days: Day[] = [
       },
       {
         time: "7:00 PM",
-        name: "Casa do Alentejo — Casa Verde",
-        description: "Farewell dinner at the estate restaurant.",
+        name: "Guest BBQ on the Estate",
+        description: "Farewell evening with a guest barbecue on the grounds at Malhadinha Nova.",
         type: "meal",
       },
     ],
