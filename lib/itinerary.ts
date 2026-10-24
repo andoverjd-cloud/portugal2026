@@ -391,14 +391,7 @@ export const days: Day[] = [
     ],
     stops: [
       {
-        time: "Morning",
-        name: "Farewell Breakfast at Malhadinha Nova",
-        description: "Final breakfast on the estate before heading home.",
-        type: "meal",
-        tags: ["Breakfast"],
-      },
-      {
-        time: "Morning",
+        time: "Early Morning",
         name: "Drive to Lisbon Airport",
         description: "~2.5 hour drive west to Lisbon Airport.",
         type: "travel",
