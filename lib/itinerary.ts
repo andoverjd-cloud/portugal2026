@@ -303,6 +303,12 @@ export const days: Day[] = [
         type: "hotel",
       },
       {
+        time: "2:30 PM",
+        name: "Wine Tasting",
+        description: "Afternoon wine tasting at Malhadinha Nova — exploring the estate's acclaimed Alentejo wines.",
+        type: "activity",
+      },
+      {
         time: "7:00 PM",
         name: "Casa do Alentejo — Casa Verde",
         description: "Dinner at Malhadinha Nova's fine dining restaurant — celebrated for its Alentejano tasting menus and exceptional estate wines.",
@@ -328,6 +334,12 @@ export const days: Day[] = [
         type: "activity",
       },
       {
+        time: "4:30 PM",
+        name: "Wine Tasting",
+        description: "Afternoon wine tasting at Malhadinha Nova — exploring the estate's acclaimed Alentejo wines.",
+        type: "activity",
+      },
+      {
         time: "7:00 PM",
         name: "Casa do Alentejo — Casa Verde",
         description: "Another evening at the estate restaurant.",
@@ -336,9 +348,40 @@ export const days: Day[] = [
     ],
   },
   {
-    id: "sunday-lisbon",
+    id: "sunday-malhadinha",
     date: "October 25, 2026",
     label: "Sunday",
+    subtitle: "Malhadinha Nova — Last Day on the Estate",
+    mapCenter: { lat: 37.96, lng: -7.98 },
+    mapZoom: 11,
+    regions: [
+      { name: "Herdade da Malhadinha Nova", description: "A final day on the estate before heading to Lisbon", color: "#1a3a5c" },
+    ],
+    stops: [
+      {
+        time: "Morning",
+        name: "Morning on the Estate",
+        description: "Breakfast and a final walk through the vineyards and olive groves.",
+        type: "activity",
+      },
+      {
+        time: "2:30 PM",
+        name: "Wine Tasting",
+        description: "Afternoon wine tasting at Malhadinha Nova — a final exploration of the estate's acclaimed Alentejo wines.",
+        type: "activity",
+      },
+      {
+        time: "7:00 PM",
+        name: "Casa do Alentejo — Casa Verde",
+        description: "Farewell dinner at the estate restaurant.",
+        type: "meal",
+      },
+    ],
+  },
+  {
+    id: "monday-lisbon",
+    date: "October 26, 2026",
+    label: "Monday",
     subtitle: "Lisbon — The Ivens",
     mapCenter: { lat: 38.72, lng: -9.14 },
     mapZoom: 11,
@@ -350,17 +393,17 @@ export const days: Day[] = [
       {
         time: "Morning",
         name: "Morning at Malhadinha Nova",
-        description: "Final morning in the Alentejo — breakfast and a walk through the vineyards.",
+        description: "Final morning in the Alentejo — breakfast before the drive to Lisbon.",
         type: "activity",
       },
       {
-        time: "2:00 PM",
+        time: "11:00 AM",
         name: "Drive to Lisbon",
         description: "~2 hour drive west to Lisbon.",
         type: "travel",
       },
       {
-        time: "4:00 PM",
+        time: "1:00 PM",
         name: "The Ivens Hotel",
         description: "Check in to The Ivens — a stylish boutique hotel in the heart of Lisbon's Chiado neighbourhood.",
         address: "Rua Ivens 10, 1200-226 Lisboa, Portugal",
@@ -378,9 +421,9 @@ export const days: Day[] = [
     ],
   },
   {
-    id: "monday-lisbon",
-    date: "October 26, 2026",
-    label: "Monday",
+    id: "tuesday-lisbon",
+    date: "October 27, 2026",
+    label: "Tuesday",
     subtitle: "Lisbon — Last Day",
     mapCenter: { lat: 38.72, lng: -9.14 },
     mapZoom: 13,
