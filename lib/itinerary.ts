@@ -372,8 +372,8 @@ export const days: Day[] = [
       },
       {
         time: "7:00 PM",
-        name: "Guest BBQ on the Estate",
-        description: "Farewell evening with a guest barbecue on the grounds at Malhadinha Nova.",
+        name: "Regional Fixed Menu Dinner",
+        description: "Farewell evening with a regional fixed menu dinner at Malhadinha Nova.",
         type: "meal",
       },
     ],
