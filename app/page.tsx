@@ -93,8 +93,8 @@ export default async function Home() {
       </div>
 
       {/* Day sections */}
-      {days.map((day) => (
-        <DaySection key={day.id} day={day} />
+      {days.map((day, i) => (
+        <DaySection key={day.id} day={day} index={i} />
       ))}
 
       {/* Footer */}

@@ -5,19 +5,7 @@ import type { Day } from "@/lib/itinerary";
 import StopCard from "./StopCard";
 import DayMap from "./DayMap";
 
-const dayNumbers: Record<string, string> = {
-  sunday: "01",
-  monday: "02",
-  tuesday: "03",
-  wednesday: "04",
-  thursday: "05",
-  friday: "06",
-  saturday: "07",
-  "sunday-malhadinha": "08",
-  "monday-departure": "09",
-};
-
-export default function DaySection({ day }: { day: Day }) {
+export default function DaySection({ day, index }: { day: Day; index: number }) {
   const [mapOpen, setMapOpen] = useState(false);
 
   return (
@@ -25,7 +13,7 @@ export default function DaySection({ day }: { day: Day }) {
       <div className="max-w-3xl mx-auto">
         <div className="flex items-baseline gap-4 mb-8">
           <span className="text-5xl font-bold text-azure/15 font-serif leading-none select-none">
-            {dayNumbers[day.id]}
+            {String(index + 1).padStart(2, "0")}
           </span>
           <div>
             <p className="text-xs uppercase tracking-widest text-azure/60 font-medium mb-0.5">
