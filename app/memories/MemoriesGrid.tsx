@@ -446,6 +446,22 @@ export function MemoriesGrid({
                     }}
                   />
                 )}
+                {/* Play button overlay for videos */}
+                {isVideo(blob.pathname) && (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none rounded-lg"
+                    style={{ background: "rgba(0,0,0,0.18)" }}
+                  >
+                    <div
+                      className="flex items-center justify-center rounded-full"
+                      style={{ width: 44, height: 44, background: "rgba(255,255,255,0.82)" }}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <polygon points="6,3 17,10 6,17" fill="#1a1a1a" />
+                      </svg>
+                    </div>
+                  </div>
+                )}
                 {/* Selection checkbox in admin mode */}
                 {canEdit && (
                   <button
