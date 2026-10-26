@@ -4,35 +4,35 @@ import { useEffect, useRef } from "react";
 const CATS = [
   { n: "Dinner", w: 22 },
   { n: "Setting", w: 20 },
-  { n: "Hospitality", w: 18 },
+  { n: "Activities", w: 18 },
   { n: "Breakfast", w: 15 },
   { n: "Rooms", w: 14 },
-  { n: "Activities", w: 11 },
+  { n: "Hospitality", w: 11 },
 ];
 
 const RESORTS = [
   {
     name: "Six Senses Douro Valley",
     place: "Douro Valley",
-    overall: 4.20,
-    scores: [4.0, 3.7, 4.3, 4.7, 4.0, 5.0],
-    tag: "Best hospitality, breakfast, and activities.",
+    overall: 4.38,
+    scores: [4.0, 3.5, 4.833, 5.0, 4.5, 5.0],
+    tag: "Best hospitality, breakfast, and activities. Weakest setting.",
     color: "#2c5a8c",
   },
   {
     name: "São Lourenço do Barrocal",
     place: "Alentejo",
-    overall: 4.36,
-    scores: [4.0, 5.0, 3.7, 4.3, 4.7, 4.7],
-    tag: "First overall: best rooms and a perfect setting.",
+    overall: 4.29,
+    scores: [4.0, 4.5, 3.833, 4.667, 4.833, 4.0],
+    tag: "Best rooms, but the lowest activities score.",
     color: "#a0721a",
   },
   {
     name: "Herdade da Malhadinha Nova",
     place: "Alentejo",
-    overall: 4.07,
-    scores: [4.7, 5.0, 3.0, 3.3, 4.0, 4.0],
-    tag: "Best dinner and a perfect setting. Service lagged.",
+    overall: 4.43,
+    scores: [4.833, 5.0, 4.167, 4.167, 4.333, 3.5],
+    tag: "Best dinner and a perfect setting. Hospitality lagged.",
     color: "#8a2a3d",
   },
 ];
@@ -105,7 +105,7 @@ export default function ResortReview() {
           Three stays across Portugal
         </h1>
         <p style={{ maxWidth: "54ch", color: "#55616d", marginTop: 14, fontSize: 17 }}>
-          October 18–26, 2026. We scored each resort on six things, and weighted them by how much they mattered to us.
+          October 18–26, 2026. We each scored every resort on six things, then weighted the results by how much each mattered to us.
         </p>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 28, marginTop: 36 }}>
@@ -128,7 +128,7 @@ export default function ResortReview() {
         </div>
 
         <div style={{ marginTop: 36, paddingTop: 18, borderTop: "1px solid #cfd4d0", display: "grid", gap: 8, color: "#55616d", fontSize: 14.5, maxWidth: "62ch" }}>
-          <p style={{ margin: 0 }}><strong style={{ color: "#17212b", fontWeight: 500 }}>Wedge width</strong> is how much a category counted toward the total: dinner the most, activities the least.</p>
+          <p style={{ margin: 0 }}><strong style={{ color: "#17212b", fontWeight: 500 }}>Wedge width</strong> is how much a category counted toward the total: dinner the most, hospitality the least.</p>
           <p style={{ margin: 0 }}><strong style={{ color: "#17212b", fontWeight: 500 }}>Wedge reach</strong> is the score, from 1 at the inner ring to 5 at the outer edge. The number in the center is the weighted overall score.</p>
         </div>
       </div>
