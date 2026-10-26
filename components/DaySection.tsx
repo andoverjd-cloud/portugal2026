@@ -13,8 +13,8 @@ const dayNumbers: Record<string, string> = {
   thursday: "05",
   friday: "06",
   saturday: "07",
-  "sunday-lisbon": "08",
-  "monday-lisbon": "09",
+  "sunday-malhadinha": "08",
+  "monday-departure": "09",
 };
 
 export default function DaySection({ day }: { day: Day }) {
