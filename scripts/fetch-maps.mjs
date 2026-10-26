@@ -77,18 +77,19 @@ const days = [
     ],
   },
   {
-    id: "sunday-lisbon",
-    // Malhadinha Nova → The Ivens, Lisbon
+    id: "sunday-malhadinha",
+    // Stay at Malhadinha Nova — single location
+    center: { lat: 37.963, lng: -7.986 }, zoom: 13,
     route: [
-      { lat: 37.9631, lng: -7.9856, type: "travel" },
-      { lat: 38.7104, lng: -9.1413, type: "hotel"  },
+      { lat: 37.9631, lng: -7.9856, type: "hotel" },
     ],
   },
   {
-    id: "monday-lisbon",
-    center: { lat: 38.717, lng: -9.14 }, zoom: 14,
+    id: "monday-departure",
+    // Malhadinha Nova → Lisbon Airport
     route: [
-      { lat: 38.7104, lng: -9.1413, type: "hotel" },
+      { lat: 37.9631, lng: -7.9856, type: "travel" },
+      { lat: 38.7742, lng: -9.1336, type: "travel" },
     ],
   },
 ];
