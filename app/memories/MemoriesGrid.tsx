@@ -171,6 +171,45 @@ export function MemoriesGrid({
   // Drag state
   const dragSrc = useRef<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ day: string | null; before: string | null } | null>(null);
+  const scrollRaf = useRef<number | null>(null);
+
+  // Auto-scroll while dragging near viewport edges
+  useEffect(() => {
+    const ZONE = 80;   // px from edge that triggers scroll
+    const MAX_SPEED = 14; // px per frame at edge
+
+    function onDragOver(e: DragEvent) {
+      if (!dragSrc.current) return;
+      const y = e.clientY;
+      const h = window.innerHeight;
+      let speed = 0;
+      if (y < ZONE) speed = -MAX_SPEED * (1 - y / ZONE);
+      else if (y > h - ZONE) speed = MAX_SPEED * (1 - (h - y) / ZONE);
+
+      if (scrollRaf.current) cancelAnimationFrame(scrollRaf.current);
+      if (speed !== 0) {
+        const scroll = () => {
+          window.scrollBy(0, speed);
+          scrollRaf.current = requestAnimationFrame(scroll);
+        };
+        scrollRaf.current = requestAnimationFrame(scroll);
+      }
+    }
+
+    function onDragEnd() {
+      if (scrollRaf.current) { cancelAnimationFrame(scrollRaf.current); scrollRaf.current = null; }
+    }
+
+    window.addEventListener("dragover", onDragOver);
+    window.addEventListener("dragend", onDragEnd);
+    window.addEventListener("drop", onDragEnd);
+    return () => {
+      window.removeEventListener("dragover", onDragOver);
+      window.removeEventListener("dragend", onDragEnd);
+      window.removeEventListener("drop", onDragEnd);
+      if (scrollRaf.current) cancelAnimationFrame(scrollRaf.current);
+    };
+  }, []);
 
   const canEdit = isAdmin && !isArchived;
   const isSelecting = selected.size > 0;
