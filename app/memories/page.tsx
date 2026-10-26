@@ -38,10 +38,9 @@ async function saveOrder(items: OrderItem[]) {
 async function deletePhoto(url: string, pathname: string, secret: string) {
   "use server";
   const { revalidatePath } = await import("next/cache");
-  if (secret !== process.env.MEMORIES_ADMIN_SECRET) return;
+  if (secret !== process.env.MEMORIES_ADMIN_SECRET) throw new Error("unauthorized");
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   await del(url, { token });
-  // Remove from DB
   const sql = getDb();
   await sql`DELETE FROM photo_metadata WHERE trip_id = ${TRIP_ID} AND pathname = ${pathname}`;
   revalidatePath("/memories");
@@ -58,16 +57,22 @@ export default async function MemoriesPage({
     params.admin === process.env.MEMORIES_ADMIN_SECRET
   );
 
-  const [isArchived] = await Promise.all([getTripArchived()]).catch(() => [false]);
+  const isArchived = await getTripArchived().catch(() => false);
 
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   let blobs: { url: string; pathname: string; day?: string; caption?: string }[] = [];
   let listError: string | null = null;
 
   try {
-    // Get all photos from Blob
-    const result = await list({ prefix: `${TRIP_ID}/`, token });
-    const photos = result.blobs.filter((b) => b.pathname.endsWith(".jpg") || b.pathname.endsWith(".jpeg") || b.pathname.endsWith(".png") || b.pathname.endsWith(".webp") || b.pathname.endsWith(".heic"));
+    // Get all photos from Blob (paginate — list() caps at 1000 per call)
+    const allBlobs: { url: string; pathname: string }[] = [];
+    let cursor: string | undefined;
+    do {
+      const result = await list({ prefix: `${TRIP_ID}/`, token, cursor, limit: 1000 });
+      allBlobs.push(...result.blobs);
+      cursor = result.hasMore ? result.cursor : undefined;
+    } while (cursor);
+    const photos = allBlobs.filter((b) => b.pathname.endsWith(".jpg") || b.pathname.endsWith(".jpeg") || b.pathname.endsWith(".png") || b.pathname.endsWith(".webp") || b.pathname.endsWith(".heic"));
 
     // Get metadata from Postgres (source of truth)
     const sql = getDb();

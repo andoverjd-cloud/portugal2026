@@ -265,8 +265,12 @@ export function MemoriesGrid({
 
   async function handleDelete(url: string, pathname: string) {
     if (!confirm("Delete this photo?")) return;
-    await deletePhoto(url, pathname, adminSecret);
-    setBlobs(prev => prev.filter(b => b.url !== url));
+    try {
+      await deletePhoto(url, pathname, adminSecret);
+      setBlobs(prev => prev.filter(b => b.pathname !== pathname));
+    } catch (e) {
+      alert("Delete failed: " + (e instanceof Error ? e.message : String(e)));
+    }
   }
 
   // Build day groups and unassigned

@@ -58,22 +58,32 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/memories/metadata
 // Body: { secret, trip_id, pathname, day?, caption?, sort_order? }
-// Updates a single photo's metadata fields (only provided fields)
+// Updates only the fields present in the request body.
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
-  const { secret, trip_id, pathname, day, caption, sort_order } = body;
+  const { secret, trip_id, pathname } = body;
 
   if (secret !== process.env.MEMORIES_ADMIN_SECRET) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  // Only update fields that were explicitly sent — use sentinel string to distinguish
+  // "not provided" from "provided as null/undefined", avoiding JS boolean → SQL coercion.
+  const hasDay = Object.prototype.hasOwnProperty.call(body, "day");
+  const hasCaption = Object.prototype.hasOwnProperty.call(body, "caption");
+  const hasSortOrder = Object.prototype.hasOwnProperty.call(body, "sort_order");
+
+  const day: string | null = hasDay ? (body.day ?? null) : null;
+  const caption: string | null = hasCaption ? (body.caption ?? null) : null;
+  const sortOrder: number | null = hasSortOrder ? (body.sort_order ?? null) : null;
+
   await sql`
     INSERT INTO photo_metadata (trip_id, pathname, day, caption, sort_order, updated_at)
-    VALUES (${trip_id}, ${pathname}, ${day ?? null}, ${caption ?? null}, ${sort_order ?? null}, NOW())
+    VALUES (${trip_id}, ${pathname}, ${day}, ${caption}, ${sortOrder}, NOW())
     ON CONFLICT (trip_id, pathname) DO UPDATE SET
-      day = CASE WHEN ${day !== undefined} THEN ${day ?? null} ELSE photo_metadata.day END,
-      caption = CASE WHEN ${caption !== undefined} THEN ${caption ?? null} ELSE photo_metadata.caption END,
-      sort_order = CASE WHEN ${sort_order !== undefined} THEN ${sort_order ?? null} ELSE photo_metadata.sort_order END,
+      day        = CASE WHEN ${hasDay ? "set" : "keep"} = 'set'  THEN ${day}       ELSE photo_metadata.day END,
+      caption    = CASE WHEN ${hasCaption ? "set" : "keep"} = 'set' THEN ${caption} ELSE photo_metadata.caption END,
+      sort_order = CASE WHEN ${hasSortOrder ? "set" : "keep"} = 'set' THEN ${sortOrder} ELSE photo_metadata.sort_order END,
       updated_at = NOW()
   `;
 
