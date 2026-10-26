@@ -165,6 +165,8 @@ export function MemoriesGrid({
   const [editingCaption, setEditingCaption] = useState<string | null>(null);
   const [captionDraft, setCaptionDraft] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [rotating, setRotating] = useState<Set<string>>(new Set());
+  const [cacheBusts, setCacheBusts] = useState<Map<string, number>>(new Map());
 
   // Drag state
   const dragSrc = useRef<string | null>(null);
@@ -289,6 +291,45 @@ export function MemoriesGrid({
     }
   }
 
+  async function handleRotate(pathname: string, url: string, degrees: 90 | -90) {
+    setRotating(prev => new Set(prev).add(pathname));
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; img.src = url; });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = img.height;
+      canvas.height = img.width;
+      const ctx = canvas.getContext("2d")!;
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((degrees * Math.PI) / 180);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+      const blob = await new Promise<Blob>((res, rej) =>
+        canvas.toBlob(b => b ? res(b) : rej(new Error("canvas toBlob failed")), "image/jpeg", 0.92)
+      );
+
+      const form = new FormData();
+      form.append("secret", adminSecret);
+      form.append("url", url);
+      form.append("pathname", pathname);
+      form.append("image", blob, pathname.split("/").pop() ?? "photo.jpg");
+
+      const resp = await fetch("/api/memories/rotate", { method: "POST", body: form });
+      const data = await resp.json();
+      if (!data.ok) throw new Error(data.error ?? "rotate failed");
+
+      const bust = Date.now();
+      setBlobs(prev => prev.map(b => b.pathname === pathname ? { ...b, url: data.url } : b));
+      setCacheBusts(prev => new Map(prev).set(pathname, bust));
+    } catch (e) {
+      alert("Rotate failed: " + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setRotating(prev => { const n = new Set(prev); n.delete(pathname); return n; });
+    }
+  }
+
   // Build day groups and unassigned
   const validDayIds = new Set(days.map(d => d.id));
   const grouped = days.map(day => ({
@@ -351,7 +392,7 @@ export function MemoriesGrid({
                 ) : (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
-                    src={blob.url}
+                    src={blob.url + (cacheBusts.has(blob.pathname) ? "?r=" + cacheBusts.get(blob.pathname) : "")}
                     alt={blob.caption || ""}
                     className="w-full rounded-lg shadow-sm object-cover aspect-square"
                     style={{
@@ -392,6 +433,29 @@ export function MemoriesGrid({
                       style={{ background: "rgba(0,0,0,0.55)" }}
                       title="Edit caption"
                     >✏️</button>
+                    {!isVideo(blob.pathname) && (
+                      <>
+                        <button
+                          onClick={() => handleRotate(blob.pathname, blob.url, -90)}
+                          disabled={rotating.has(blob.pathname)}
+                          className="absolute bottom-2 right-9 w-7 h-7 rounded-full text-white text-sm flex items-center justify-center shadow opacity-0 group-hover:opacity-80 hover:!opacity-100 transition-opacity disabled:opacity-30"
+                          style={{ background: "rgba(0,0,0,0.55)" }}
+                          title="Rotate left"
+                        >↺</button>
+                        <button
+                          onClick={() => handleRotate(blob.pathname, blob.url, 90)}
+                          disabled={rotating.has(blob.pathname)}
+                          className="absolute bottom-2 right-2 w-7 h-7 rounded-full text-white text-sm flex items-center justify-center shadow opacity-0 group-hover:opacity-80 hover:!opacity-100 transition-opacity disabled:opacity-30"
+                          style={{ background: "rgba(0,0,0,0.55)" }}
+                          title="Rotate right"
+                        >↻</button>
+                        {rotating.has(blob.pathname) && (
+                          <div className="absolute inset-0 rounded-lg flex items-center justify-center" style={{ background: "rgba(0,0,0,0.45)" }}>
+                            <span className="text-white text-xs">Rotating…</span>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </>
                 )}
               </div>
