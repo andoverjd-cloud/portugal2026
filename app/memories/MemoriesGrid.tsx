@@ -6,8 +6,12 @@ export type OrderItem = { pathname: string; day?: string; caption?: string | nul
 export type DayInfo = { id: string; label: string; date: string; subtitle?: string };
 type BlobItem = { url: string; pathname: string; day?: string; caption?: string };
 
-function Lightbox({ url, caption, index, total, onClose, onPrev, onNext }: {
-  url: string; caption?: string; index: number; total: number;
+function isVideo(pathname: string) {
+  return pathname.endsWith(".mp4") || pathname.endsWith(".mov") || pathname.endsWith(".MP4") || pathname.endsWith(".MOV");
+}
+
+function Lightbox({ url, pathname, caption, index, total, onClose, onPrev, onNext }: {
+  url: string; pathname: string; caption?: string; index: number; total: number;
   onClose: () => void; onPrev: () => void; onNext: () => void;
 }) {
   useEffect(() => {
@@ -27,15 +31,27 @@ function Lightbox({ url, caption, index, total, onClose, onPrev, onNext }: {
       style={{ background: "rgba(0,0,0,0.92)" }}
       onClick={onClose}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={url}
-        alt={caption || ""}
-        className="object-contain"
-        style={{ width: "auto", height: "auto", maxWidth: "85vw", maxHeight: caption ? "82vh" : "90vh", minWidth: "min(85vw, 600px)", minHeight: "min(70vh, 400px)" }}
-        onClick={(e) => e.stopPropagation()}
-        draggable={false}
-      />
+      {isVideo(pathname) ? (
+        <video
+          src={url}
+          controls
+          autoPlay
+          playsInline
+          className="object-contain"
+          style={{ width: "auto", height: "auto", maxWidth: "85vw", maxHeight: caption ? "82vh" : "90vh" }}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ) : (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={url}
+          alt={caption || ""}
+          className="object-contain"
+          style={{ width: "auto", height: "auto", maxWidth: "85vw", maxHeight: caption ? "82vh" : "90vh", minWidth: "min(85vw, 600px)", minHeight: "min(70vh, 400px)" }}
+          onClick={(e) => e.stopPropagation()}
+          draggable={false}
+        />
+      )}
       <button
         onClick={onClose}
         className="absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center text-white text-lg font-bold"
@@ -315,22 +331,41 @@ export function MemoriesGrid({
                 onDragOver={(e) => handleDragOverPhoto(e, blob.pathname, blob.day)}
                 style={canEdit && !isSelecting ? { cursor: "grab", opacity: isDragging ? 0.35 : 1, transition: "opacity 0.15s" } : undefined}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={blob.url}
-                  alt={blob.caption || ""}
-                  className="w-full rounded-lg shadow-sm object-cover aspect-square"
-                  style={{
-                    cursor: "pointer",
-                    ...(isSelected ? { outline: "3px solid var(--color-ocean, #0077b6)", outlineOffset: "2px" } : {}),
-                  }}
-                  loading="lazy"
-                  draggable={false}
-                  onClick={() => {
-                    if (isSelecting && canEdit) { toggleSelect(blob.pathname); return; }
-                    if (!isDragging) setLightboxPathname(blob.pathname);
-                  }}
-                />
+                {isVideo(blob.pathname) ? (
+                  <video
+                    src={blob.url}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="w-full rounded-lg shadow-sm object-cover aspect-square"
+                    style={{
+                      cursor: "pointer",
+                      ...(isSelected ? { outline: "3px solid var(--color-ocean, #0077b6)", outlineOffset: "2px" } : {}),
+                    }}
+                    draggable={false}
+                    onClick={() => {
+                      if (isSelecting && canEdit) { toggleSelect(blob.pathname); return; }
+                      if (!isDragging) setLightboxPathname(blob.pathname);
+                    }}
+                  />
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={blob.url}
+                    alt={blob.caption || ""}
+                    className="w-full rounded-lg shadow-sm object-cover aspect-square"
+                    style={{
+                      cursor: "pointer",
+                      ...(isSelected ? { outline: "3px solid var(--color-ocean, #0077b6)", outlineOffset: "2px" } : {}),
+                    }}
+                    loading="lazy"
+                    draggable={false}
+                    onClick={() => {
+                      if (isSelecting && canEdit) { toggleSelect(blob.pathname); return; }
+                      if (!isDragging) setLightboxPathname(blob.pathname);
+                    }}
+                  />
+                )}
                 {/* Selection checkbox in admin mode */}
                 {canEdit && (
                   <button
@@ -412,6 +447,7 @@ export function MemoriesGrid({
       {lightboxBlob && (
         <Lightbox
           url={lightboxBlob.url}
+          pathname={lightboxBlob.pathname}
           caption={lightboxBlob.caption}
           index={lightboxIndex}
           total={allBlobs.length}

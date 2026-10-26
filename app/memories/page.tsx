@@ -72,7 +72,7 @@ export default async function MemoriesPage({
       allBlobs.push(...result.blobs);
       cursor = result.hasMore ? result.cursor : undefined;
     } while (cursor);
-    const photos = allBlobs.filter((b) => b.pathname.endsWith(".jpg") || b.pathname.endsWith(".jpeg") || b.pathname.endsWith(".png") || b.pathname.endsWith(".webp") || b.pathname.endsWith(".heic"));
+    const photos = allBlobs.filter((b) => b.pathname.endsWith(".jpg") || b.pathname.endsWith(".jpeg") || b.pathname.endsWith(".png") || b.pathname.endsWith(".webp") || b.pathname.endsWith(".heic") || b.pathname.endsWith(".mp4") || b.pathname.endsWith(".mov") || b.pathname.endsWith(".MP4") || b.pathname.endsWith(".MOV"));
 
     // Get metadata from Postgres (source of truth)
     const sql = getDb();
