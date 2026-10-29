@@ -41,10 +41,6 @@ export const hotels = {
     name: "Herdade da Malhadinha Nova",
     url: "https://www.malhadinhanova.pt/en/",
   },
-  ivens: {
-    name: "The Ivens Hotel, Lisbon",
-    url: "https://www.theivens.com/",
-  },
 };
 
 export const days: Day[] = [
