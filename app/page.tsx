@@ -81,7 +81,7 @@ export default async function Home() {
           </div>
           <div className="w-px bg-white/10" />
           <div>
-            <div className="text-terra font-semibold text-lg">4</div>
+            <div className="text-terra font-semibold text-lg">{Object.keys(hotels).length}</div>
             <div className="text-xs uppercase tracking-wide">Hotels</div>
           </div>
           <div className="w-px bg-white/10" />
